@@ -1,36 +1,157 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# پریسما شاپ
 
-## Getting Started
+فروشگاه آنلاین فارسی برای محصولات چوبی، دکور و حروف کالیگرافی با طراحی مدرن، تم گرم چوبی و رابط کاربری RTL.
 
-First, run the development server:
+این پروژه با `Next.js 16`، `React 19`، `TypeScript` و `Tailwind CSS 4` ساخته شده و در حال حاضر یک نسخه فرانت‌اند کامل برای نمایش محصولات، سبد خرید، احراز هویت سمت کاربر و صفحات محتوایی فروشگاه است.
+
+## معرفی
+
+`Prisma Shop` یک فروشگاه اینترنتی با تمرکز بر:
+
+- حروف کالیگرافی چوبی
+- محصولات چوبی خام
+- مبلمان چوبی
+- دکوری و تزئینی
+- ابزار نجاری
+- رنگ و پوشش
+
+طراحی پروژه بر پایه فضای بصری کرم، قهوه‌ای و طلایی انجام شده تا حس محصولات چوبی و هنری را بهتر منتقل کند.
+
+## امکانات فعلی
+
+- صفحه اصلی با هیرو، دسته‌بندی‌ها، محصولات ویژه و آمار فروشگاه
+- لیست محصولات و فیلتر بر اساس دسته‌بندی و جستجو
+- صفحه جزئیات هر محصول
+- سبد خرید با مدیریت تعداد، حذف و ذخیره در `localStorage`
+- صفحه پرداخت و ثبت سفارش نمایشی
+- احراز هویت سمت کاربر شامل:
+  - ثبت‌نام
+  - ورود
+  - فراموشی رمز عبور
+  - نمایش نام کامل کاربر در هدر بعد از ورود
+  - خروج با دیالوگ تایید
+- صفحات محتوایی:
+  - درباره ما
+  - تماس با ما
+  - بلاگ و جزئیات مقاله
+- رابط کاربری فارسی و `RTL`
+- مخفی شدن `Navbar` و `Footer` در صفحات `auth`
+
+## تکنولوژی‌ها
+
+- `Next.js 16.3.1`
+- `React 19.2.8`
+- `TypeScript 5`
+- `Tailwind CSS 4`
+- `ESLint 9`
+
+## اجرای پروژه
+
+ابتدا وابستگی‌ها را نصب کنید:
+
+```bash
+npm install
+```
+
+سپس سرور توسعه را اجرا کنید:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+پروژه روی آدرس زیر در دسترس خواهد بود:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+http://localhost:3000
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## اسکریپت‌ها
 
-## Learn More
+```bash
+npm run dev
+```
 
-To learn more about Next.js, take a look at the following resources:
+اجرای پروژه در حالت توسعه
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+npm run build
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+بیلد production
 
-## Deploy on Vercel
+```bash
+npm run start
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+اجرای نسخه production بعد از build
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+npm run lint
+```
+
+بررسی lint
+
+## ساختار کلی پروژه
+
+```text
+app/
+  about/                صفحه درباره ما
+  auth/
+    forgot/             فراموشی رمز
+    login/              ورود
+    signup/             ثبت‌نام
+  blog/                 لیست مقالات
+  cart/                 سبد خرید
+  checkout/             پرداخت
+  contact/              تماس با ما
+  products/             لیست و جزئیات محصولات
+  components/           کامپوننت‌های مشترک
+  data/                 داده‌های نمونه محصولات و مقالات
+public/
+  images/calligraphy/   تصاویر کالیگرافی
+```
+
+## مسیرهای اصلی
+
+- `/` صفحه اصلی
+- `/products` لیست محصولات
+- `/products/[id]` جزئیات محصول
+- `/cart` سبد خرید
+- `/checkout` پرداخت
+- `/about` درباره ما
+- `/contact` تماس با ما
+- `/blog` بلاگ
+- `/blog/[slug]` جزئیات مقاله
+- `/auth/login` ورود
+- `/auth/signup` ثبت‌نام
+- `/auth/forgot` فراموشی رمز
+
+## نکات فنی
+
+- اطلاعات سبد خرید در `localStorage` و با کلید `prismashop-cart` ذخیره می‌شود.
+- اطلاعات کاربران ثبت‌نام‌شده در `localStorage` و با کلید `prismashop-users` نگهداری می‌شود.
+- نشست کاربر واردشده با کلید `prismashop-session` ذخیره می‌شود.
+- احراز هویت فعلاً فقط در سمت کلاینت پیاده‌سازی شده و به بک‌اند متصل نیست.
+- داده‌های محصولات و برخی محتواها به‌صورت استاتیک در `app/data` قرار دارند.
+
+## وضعیت فعلی پروژه
+
+این نسخه برای نمایش UI، توسعه فرانت‌اند و نمونه‌سازی تجربه فروشگاه مناسب است. برای استفاده در محیط واقعی، بهتر است موارد زیر در ادامه اضافه شوند:
+
+- بک‌اند واقعی برای احراز هویت و سفارش‌ها
+- پایگاه داده برای محصولات، کاربران و سفارش‌ها
+- درگاه پرداخت واقعی
+- پنل مدیریت
+- آپلود و مدیریت محتوای بلاگ
+
+## پیشنهاد برای توسعه بعدی
+
+- اتصال به API یا CMS
+- افزودن سیستم علاقه‌مندی‌ها
+- پیاده‌سازی جستجوی پیشرفته‌تر
+- افزودن تست برای بخش‌های کلیدی
+- بهینه‌سازی SEO برای صفحات محصول و بلاگ
+
+## لایسنس
+
+این پروژه در حال حاضر برای استفاده آموزشی و توسعه‌ای نگهداری می‌شود.
