@@ -4,6 +4,10 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useEffect, useState } from "react";
+import {
+  isAdminCredentials,
+  setAdminSession,
+} from "../../lib/admin-auth";
 
 const USERS_STORAGE_KEY = "prismashop-users";
 const SESSION_STORAGE_KEY = "prismashop-session";
@@ -38,6 +42,13 @@ export default function LoginPage() {
       return;
     }
 
+    // Admin credentials on storefront login → open admin panel
+    if (isAdminCredentials(form.email, form.password)) {
+      setAdminSession();
+      router.replace("/admin");
+      return;
+    }
+
     try {
       setIsSubmitting(true);
       const rawUsers = window.localStorage.getItem(USERS_STORAGE_KEY);
@@ -50,7 +61,9 @@ export default function LoginPage() {
       );
 
       if (!matchedUser) {
-        setError("اطلاعات ورود صحیح نیست.");
+        setError(
+          "اطلاعات ورود صحیح نیست. اگر ادمین هستید از /admin/login وارد شوید یا ابتدا ثبت‌نام کنید.",
+        );
         setIsSubmitting(false);
         return;
       }
@@ -221,6 +234,12 @@ export default function LoginPage() {
                 >
                   {isSubmitting ? "در حال ورود..." : "ورود به حساب"}
                 </button>
+                <p className="text-center text-xs leading-6 text-[#f0d3aa]/90">
+                  مدیر فروشگاه هستید؟{" "}
+                  <Link href="/admin/login" className="font-bold text-white underline">
+                    ورود به پنل ادمین
+                  </Link>
+                </p>
                 {error && (
                   <div className="rounded-2xl border border-red-300/50 bg-red-500/10 px-4 py-3 text-sm text-red-100">
                     {error}

@@ -2,19 +2,22 @@
 
 import Link from "next/link";
 import { useMemo } from "react";
-import { products } from "../data/products";
 import ProductCard from "../components/ProductCard";
+import { useShop } from "../components/ShopProvider";
 import { useWishlist } from "../components/WishlistProvider";
+import type { Product } from "../lib/shop-types";
 
 export default function WishlistPage() {
   const { ids, clearWishlist, totalItems } = useWishlist();
+  const { getActiveProducts } = useShop();
+  const products = getActiveProducts();
 
   const rows = useMemo(
     () =>
       ids
         .map((id) => products.find((product) => product.id === id))
-        .filter((product): product is (typeof products)[number] => Boolean(product)),
-    [ids],
+        .filter((product): product is Product => Boolean(product)),
+    [ids, products],
   );
 
   return (

@@ -1,26 +1,45 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
-import { products } from "../data/products";
+import { useEffect, useMemo, useState } from "react";
 import { useCart } from "../components/CartProvider";
+import { useShop } from "../components/ShopProvider";
+import {
+  calcCouponDiscount,
+  COUPON_STORAGE_KEY,
+  findCoupon,
+} from "../lib/coupons";
 
 export default function CartPage() {
-  const { items, updateQty, removeItem, clearCart } = useCart();
+  const { items, updateQty, removeItem, clearCart, getAvailableStock } = useCart();
+  const { getProduct, coupons } = useShop();
   const [coupon, setCoupon] = useState("");
-  const [couponApplied, setCouponApplied] = useState(false);
+  const [appliedCode, setAppliedCode] = useState("");
   const [couponMessage, setCouponMessage] = useState("");
+  const [stockMsg, setStockMsg] = useState("");
+
+  useEffect(() => {
+    try {
+      const saved = window.sessionStorage.getItem(COUPON_STORAGE_KEY);
+      if (saved) {
+        setAppliedCode(saved);
+        setCoupon(saved);
+      }
+    } catch {}
+  }, []);
 
   const rows = useMemo(
     () =>
       items
-        .map((i) => ({ ...i, product: products.find((p) => p.id === i.id) }))
+        .map((i) => ({ ...i, product: getProduct(i.id) }))
         .filter((r) => Boolean(r.product)),
-    [items],
+    [items, getProduct],
   );
 
+  const appliedCoupon = appliedCode ? findCoupon(coupons, appliedCode) : undefined;
+  const couponApplied = Boolean(appliedCoupon);
   const subtotal = rows.reduce((sum, r) => sum + (r.product?.price ?? 0) * r.qty, 0);
-  const discount = couponApplied ? Math.floor(subtotal * 0.1) : 0;
+  const discount = calcCouponDiscount(subtotal, appliedCoupon);
   const shipping = subtotal > 500000 ? 0 : 60000;
   const total = subtotal - discount + shipping;
 
@@ -117,8 +136,27 @@ export default function CartPage() {
                           <button className="px-3 py-2 min-w-10" onClick={() => updateQty(row.id, row.qty - 1)}>−</button>
                         )}
                         <span className="px-3 py-2 min-w-8 text-center text-sm font-medium">{row.qty}</span>
-                        <button className="px-3 py-2 min-w-10" onClick={() => updateQty(row.id, row.qty + 1)}>+</button>
+                        <button
+                          className="px-3 py-2 min-w-10 disabled:opacity-40"
+                          disabled={row.qty >= getAvailableStock(row.id)}
+                          onClick={() => {
+                            const result = updateQty(row.id, row.qty + 1);
+                            if (!result.ok) {
+                              setStockMsg(
+                                `حداکثر ${getAvailableStock(row.id).toLocaleString("fa-IR")} عدد از این محصول قابل خرید است`,
+                              );
+                              window.setTimeout(() => setStockMsg(""), 2200);
+                            }
+                          }}
+                        >
+                          +
+                        </button>
                       </div>
+                      {row.qty >= getAvailableStock(row.id) && (
+                        <p className="text-[11px] text-amber-700 mt-1">
+                          حداکثر موجودی: {getAvailableStock(row.id).toLocaleString("fa-IR")} عدد
+                        </p>
+                      )}
                       <div className="sm:text-left flex items-center justify-between sm:block gap-3">
                         <p className="font-bold text-[#4e2e0e] text-sm sm:text-base">{((row.product?.price ?? 0) * row.qty).toLocaleString("fa-IR")} تومان</p>
                         <button className="text-xs text-red-600 sm:mt-1" onClick={() => removeItem(row.id)}>حذف</button>
@@ -140,29 +178,58 @@ export default function CartPage() {
             <div className="bg-white border border-[#e8cfa8] rounded-3xl p-4 sm:p-5 h-fit lg:sticky lg:top-28">
               <h2 className="font-bold text-[#2e1a08] mb-4">خلاصه سفارش</h2>
               <div className="space-y-2 text-sm mb-4">
-                <div className="flex justify-between gap-3"><span>جمع جزء</span><span className="text-left">{subtotal.toLocaleString("fa-IR")} تومان</span></div>
+                <div className="flex justify-between gap-3"><span>جمع کل</span><span className="text-left">{subtotal.toLocaleString("fa-IR")} تومان</span></div>
                 <div className="flex justify-between gap-3 text-green-700"><span>تخفیف</span><span className="text-left">{discount.toLocaleString("fa-IR")} تومان</span></div>
                 <div className="flex justify-between gap-3"><span>ارسال</span><span className="text-left">{shipping === 0 ? "رایگان" : `${shipping.toLocaleString("fa-IR")} تومان`}</span></div>
                 <div className="flex justify-between gap-3 font-bold text-[#2e1a08] border-t pt-2"><span>مبلغ نهایی</span><span className="text-left">{total.toLocaleString("fa-IR")} تومان</span></div>
               </div>
+              {stockMsg && (
+                <p className="mb-3 rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-800">{stockMsg}</p>
+              )}
               <div className="flex flex-col sm:flex-row gap-2 mb-3">
                 <input
                   value={coupon}
                   onChange={(e) => setCoupon(e.target.value)}
                   placeholder="کد تخفیف"
-                  className="flex-1 min-w-0 border border-[#e8cfa8] rounded-xl px-3 py-2.5 bg-[#fdf8f3] text-sm"
+                  className={`flex-1 min-w-0 rounded-xl border border-[#e8cfa8] bg-[#fdf8f3] px-3 py-2.5 text-sm ${
+                    coupon ? "text-left" : "text-right"
+                  }`}
                   disabled={couponApplied}
+                  dir={coupon ? "ltr" : "rtl"}
                 />
-                {!couponApplied && (
+                {!couponApplied ? (
                   <button
                     onClick={() => {
-                      const valid = coupon.trim().toUpperCase() === "PRISMA10";
-                      setCouponApplied(valid);
-                      setCouponMessage(valid ? "کد تخفیف با موفقیت اعمال شد." : "کد تخفیف معتبر نیست.");
+                      const found = findCoupon(coupons, coupon);
+                      if (!found) {
+                        setCouponMessage("کد تخفیف معتبر نیست.");
+                        return;
+                      }
+                      if (subtotal < found.minOrder) {
+                        setCouponMessage(
+                          `حداقل مبلغ سفارش برای این کد ${found.minOrder.toLocaleString("fa-IR")} تومان است.`,
+                        );
+                        return;
+                      }
+                      setAppliedCode(found.code);
+                      window.sessionStorage.setItem(COUPON_STORAGE_KEY, found.code);
+                      setCouponMessage("کد تخفیف با موفقیت اعمال شد.");
                     }}
                     className="bg-[#6d4014] text-white px-4 py-2.5 rounded-xl shrink-0 text-sm"
                   >
                     اعمال
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => {
+                      setAppliedCode("");
+                      setCoupon("");
+                      setCouponMessage("");
+                      window.sessionStorage.removeItem(COUPON_STORAGE_KEY);
+                    }}
+                    className="border border-[#ead7bb] text-[#6d4014] px-4 py-2.5 rounded-xl shrink-0 text-sm"
+                  >
+                    حذف کد
                   </button>
                 )}
               </div>
@@ -177,7 +244,13 @@ export default function CartPage() {
                 </div>
               )}
               {!couponApplied && (
-                <p className="text-xs text-[#a96c20] mb-4">برای تست: کد `PRISMA10` را وارد کن.</p>
+                <p className="mb-4 text-right text-xs leading-6 text-[#a96c20]" dir="rtl">
+                  کدهای فعال را از پنل ادمین مدیریت کنید (مثل{" "}
+                  <span dir="ltr" className="inline-block font-medium tracking-wide">
+                    PRISMA10
+                  </span>
+                  ).
+                </p>
               )}
               <Link
                 href="/checkout"

@@ -1,11 +1,15 @@
+"use client";
+
 import Link from "next/link";
 import ProductCard from "./components/ProductCard";
-import { products, categories } from "./data/products";
+import { useShop } from "./components/ShopProvider";
 
 export default function Home() {
+  const { getActiveProducts, categories, products: allProducts } = useShop();
+  const products = getActiveProducts();
   const featuredProducts = [
-    ...products.filter((product) => product.category === "حروف کالیگرافی"),
-    ...products.filter((product) => product.category !== "حروف کالیگرافی"),
+    ...products.filter((product) => product.categoryId === "calligraphy"),
+    ...products.filter((product) => product.categoryId !== "calligraphy"),
   ].slice(0, 8);
   const newProducts = products.filter((p) => p.isNew);
 
@@ -119,7 +123,9 @@ export default function Home() {
               <div className="p-3">
                 <div className="text-xl mb-1">{cat.icon}</div>
                 <div className="text-xs font-bold text-[#4e2e0e] leading-5">{cat.name}</div>
-                <div className="text-[10px] text-[#a96c20] mt-0.5">{cat.count} محصول</div>
+                <div className="text-[10px] text-[#a96c20] mt-0.5">
+                  {allProducts.filter((p) => p.categoryId === cat.id && p.active).length.toLocaleString("fa-IR")} محصول
+                </div>
               </div>
             </Link>
           ))}

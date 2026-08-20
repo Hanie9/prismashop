@@ -1,29 +1,52 @@
 "use client";
 
-import { use, useState } from "react";
+import { use, useEffect, useState } from "react";
 import Link from "next/link";
-import { products } from "../../data/products";
 import ProductCard from "../../components/ProductCard";
 import { useCart } from "../../components/CartProvider";
+import { useShop } from "../../components/ShopProvider";
 import { useWishlist } from "../../components/WishlistProvider";
+import { getProductImages } from "../../lib/product-images";
 
 export default function ProductDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const { addItem, getItemQty } = useCart();
+  const { addItem, getItemQty, getAvailableStock } = useCart();
+  const { getProduct, getActiveProducts, isLowStock } = useShop();
   const { isWishlisted, toggleItem } = useWishlist();
-  const product = products.find((p) => p.id === Number(id)) ?? products[0];
-  const qtyInCart = getItemQty(product.id);
-  const wishlisted = isWishlisted(product.id);
-  const related = products.filter((p) => p.id !== product.id && p.category === product.category).slice(0, 4);
+  const products = getActiveProducts();
+  const product = getProduct(Number(id)) ?? products[0];
+  const qtyInCart = getItemQty(product?.id ?? 0);
+  const wishlisted = isWishlisted(product?.id ?? 0);
+  const stock = product ? getAvailableStock(product.id) : 0;
+  const related = products
+    .filter((p) => product && p.id !== product.id && p.categoryId === product.categoryId)
+    .slice(0, 4);
   const [selectedImg, setSelectedImg] = useState(0);
   const [qty, setQty] = useState(1);
   const [activeTab, setActiveTab] = useState<"desc" | "specs" | "reviews">("desc");
   const [added, setAdded] = useState(false);
+  const [stockMsg, setStockMsg] = useState("");
 
-  const images = [product.image, ...products.slice(0, 3).map((p) => p.image)];
+  useEffect(() => {
+    setSelectedImg(0);
+    setQty(1);
+  }, [id]);
+
+  if (!product) {
+    return (
+      <div className="flex min-h-[50vh] items-center justify-center text-sm text-[#6d4014]">
+        محصول یافت نشد.
+      </div>
+    );
+  }
+
+  const images = getProductImages(product);
+  const safeIndex = Math.min(selectedImg, Math.max(0, images.length - 1));
   const discountPct = product.originalPrice
     ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
     : 0;
+  const outOfStock = stock <= 0;
+  const remaining = Math.max(0, stock - qtyInCart);
 
   return (
     <div className="min-h-screen bg-[#faf6ee]">
@@ -46,24 +69,27 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
           <div>
             <div className="aspect-square rounded-2xl overflow-hidden bg-[#f5e9d5] mb-4 border border-[#e8cfa8]">
               <img
-                src={images[selectedImg]}
+                src={images[safeIndex]}
                 alt={product.name}
                 className="w-full h-full object-cover"
               />
             </div>
-            <div className="flex gap-2 sm:gap-3 overflow-x-auto pb-1">
-              {images.map((img, i) => (
-                <button
-                  key={i}
-                  onClick={() => setSelectedImg(i)}
-                  className={`w-14 h-14 sm:w-16 sm:h-16 shrink-0 rounded-xl overflow-hidden border-2 transition-all ${
-                    selectedImg === i ? "border-[#a96c20]" : "border-[#e8cfa8] hover:border-[#c2883a]"
-                  }`}
-                >
-                  <img src={img} alt="" className="w-full h-full object-cover"/>
-                </button>
-              ))}
-            </div>
+            {images.length > 1 && (
+              <div className="flex gap-2 sm:gap-3 overflow-x-auto pb-1">
+                {images.map((img, i) => (
+                  <button
+                    key={`${i}-${img.slice(0, 32)}`}
+                    type="button"
+                    onClick={() => setSelectedImg(i)}
+                    className={`w-14 h-14 sm:w-16 sm:h-16 shrink-0 rounded-xl overflow-hidden border-2 transition-all ${
+                      safeIndex === i ? "border-[#a96c20]" : "border-[#e8cfa8] hover:border-[#c2883a]"
+                    }`}
+                  >
+                    <img src={img} alt="" className="w-full h-full object-cover" />
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Info */}
@@ -81,7 +107,19 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                 ))}
               </div>
               <span className="text-sm text-[#a96c20]">({product.reviewCount} نظر)</span>
-              <span className="text-green-600 text-sm font-medium border border-green-200 bg-green-50 px-2 py-0.5 rounded-full">موجود</span>
+              {outOfStock ? (
+                <span className="text-red-600 text-sm font-medium border border-red-200 bg-red-50 px-2 py-0.5 rounded-full">
+                  ناموجود
+                </span>
+              ) : isLowStock(product) ? (
+                <span className="text-amber-700 text-sm font-medium border border-amber-200 bg-amber-50 px-2 py-0.5 rounded-full">
+                  موجودی کم — {stock.toLocaleString("fa-IR")} عدد
+                </span>
+              ) : (
+                <span className="text-green-600 text-sm font-medium border border-green-200 bg-green-50 px-2 py-0.5 rounded-full">
+                  موجود ({stock.toLocaleString("fa-IR")})
+                </span>
+              )}
             </div>
 
             {/* Price */}
@@ -105,7 +143,8 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
 
             {/* Short desc */}
             <p className="text-sm text-[#6d4014] leading-7 mb-6 border-b border-[#f5e9d5] pb-6">
-              این محصول از بهترین چوب‌های طبیعی ایرانی ساخته شده و برای استفاده در هنر دکوپاژ، نجاری خانگی و دکوراسیون داخلی مناسب است. سطح صاف و فاقد لاک برای رنگ‌کاری و تزئین آماده‌سازی شده است.
+              {product.description ||
+                "این محصول از بهترین چوب‌های طبیعی ایرانی ساخته شده و برای استفاده در هنر دکوپاژ، نجاری خانگی و دکوراسیون داخلی مناسب است."}
             </p>
 
             {/* Quantity */}
@@ -115,34 +154,56 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                 <button
                   onClick={() => setQty(Math.max(1, qty - 1))}
                   className="w-10 h-10 flex items-center justify-center text-[#6d4014] hover:bg-[#f5e9d5] transition-colors font-bold text-lg"
+                  disabled={outOfStock}
                 >
                   −
                 </button>
                 <span className="w-12 text-center text-sm font-bold text-[#2e1a08]">{qty}</span>
                 <button
-                  onClick={() => setQty(qty + 1)}
-                  className="w-10 h-10 flex items-center justify-center text-[#6d4014] hover:bg-[#f5e9d5] transition-colors font-bold text-lg"
+                  onClick={() => setQty(Math.min(Math.max(1, remaining), qty + 1))}
+                  className="w-10 h-10 flex items-center justify-center text-[#6d4014] hover:bg-[#f5e9d5] transition-colors font-bold text-lg disabled:opacity-40"
+                  disabled={outOfStock || qty >= remaining}
                 >
                   +
                 </button>
               </div>
+              {!outOfStock && (
+                <span className="text-xs text-[#a96c20]">
+                  حداکثر قابل افزودن: {remaining.toLocaleString("fa-IR")}
+                </span>
+              )}
             </div>
 
             {/* CTA buttons */}
             <div className="flex gap-3 mb-6">
               <button
-                className="flex-1 min-w-0 bg-[#6d4014] hover:bg-[#4e2e0e] text-white font-bold py-3.5 rounded-2xl transition-colors text-sm sm:text-base px-3"
+                className="flex-1 min-w-0 bg-[#6d4014] hover:bg-[#4e2e0e] text-white font-bold py-3.5 rounded-2xl transition-colors text-sm sm:text-base px-3 disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={outOfStock || remaining <= 0}
                 onClick={() => {
-                  addItem(product.id, qty);
+                  const result = addItem(product.id, qty);
+                  if (!result.ok) {
+                    setStockMsg(
+                      result.reason === "out_of_stock"
+                        ? "این محصول ناموجود است"
+                        : `بیش از ${stock.toLocaleString("fa-IR")} عدد نمی‌توانید خرید کنید`,
+                    );
+                    window.setTimeout(() => setStockMsg(""), 2200);
+                    return;
+                  }
                   setAdded(true);
+                  setQty(1);
                   window.setTimeout(() => setAdded(false), 1400);
                 }}
               >
-                {added
-                  ? "به سبد اضافه شد"
-                  : qtyInCart > 0
-                    ? `افزایش در سبد (${qtyInCart.toLocaleString("fa-IR")})`
-                    : "افزودن به سبد خرید"}
+                {outOfStock
+                  ? "ناموجود"
+                  : added
+                    ? "به سبد اضافه شد"
+                    : remaining <= 0
+                      ? "حداکثر موجودی در سبد است"
+                      : qtyInCart > 0
+                        ? `افزایش در سبد (${qtyInCart.toLocaleString("fa-IR")})`
+                        : "افزودن به سبد خرید"}
               </button>
               <button
                 type="button"
@@ -166,6 +227,10 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                 </svg>
               </button>
             </div>
+
+            {stockMsg && (
+              <p className="mb-4 rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-800">{stockMsg}</p>
+            )}
 
             {/* Meta */}
             <div className="space-y-2 text-sm text-[#a96c20]">
