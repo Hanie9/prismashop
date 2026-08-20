@@ -15,17 +15,17 @@ export default async function BlogDetailPage({
 
   return (
     <div className="min-h-screen bg-[#faf6ee]">
-      <div className="max-w-4xl mx-auto px-4 py-12">
+      <div className="max-w-4xl mx-auto px-4 py-8 sm:py-12">
         <Link href="/blog" className="text-sm text-[#6d4014] hover:text-[#a96c20]">← بازگشت به بلاگ</Link>
         <article className="bg-white border border-[#e8cfa8] rounded-3xl overflow-hidden mt-4">
-          <img src={post.cover} alt={post.title} className="w-full h-72 object-cover" />
-          <div className="p-8">
+          <img src={post.cover} alt={post.title} className="w-full h-48 sm:h-64 md:h-72 object-cover" />
+          <div className="p-5 sm:p-8">
             <p className="text-sm text-[#a96c20] mb-2">{post.category} • {post.readTime}</p>
-            <h1 className="text-3xl font-black text-[#2e1a08] mb-4">{post.title}</h1>
-            <p className="text-[#6d4014] mb-6">{post.excerpt}</p>
+            <h1 className="text-2xl sm:text-3xl font-black text-[#2e1a08] mb-4 leading-9">{post.title}</h1>
+            <p className="text-[#6d4014] mb-6 text-sm sm:text-base">{post.excerpt}</p>
             <div className="space-y-4">
               {post.content.map((paragraph) => (
-                <p key={paragraph} className="leading-8 text-[#4e2e0e]">{paragraph}</p>
+                <p key={paragraph} className="leading-8 text-[#4e2e0e] text-sm sm:text-base">{paragraph}</p>
               ))}
             </div>
           </div>

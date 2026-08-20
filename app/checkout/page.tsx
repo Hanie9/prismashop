@@ -102,8 +102,8 @@ export default function CheckoutPage() {
             <p className="text-[#6d4014] leading-7 mb-6">
               {submittedName} عزیز، سفارش شما ثبت شد. کد پیگیری زیر را نگه دارید تا در صورت نیاز وضعیت سفارش را پیگیری کنید.
             </p>
-            <div className="flex items-center justify-center gap-2 mb-3">
-              <div className="inline-flex items-center justify-center rounded-2xl bg-[#fdf1df] border border-[#e8cfa8] px-6 py-4 text-[#6d4014] font-black text-xl">
+            <div className="flex flex-wrap items-center justify-center gap-2 mb-3">
+              <div className="inline-flex items-center justify-center rounded-2xl bg-[#fdf1df] border border-[#e8cfa8] px-4 sm:px-6 py-4 text-[#6d4014] font-black text-lg sm:text-xl tracking-wide">
                 {trackingCode}
               </div>
               <button
@@ -151,17 +151,17 @@ export default function CheckoutPage() {
 
   return (
     <div className="min-h-screen bg-[#faf6ee]">
-      <div className="max-w-7xl mx-auto px-4 py-10">
-        <div className="mb-8">
-          <h1 className="text-3xl font-black text-[#2e1a08] mb-2">تکمیل سفارش</h1>
-          <p className="text-[#6d4014]">اطلاعات گیرنده و آدرس را کامل کنید تا سفارش شما ثبت شود.</p>
+      <div className="max-w-7xl mx-auto px-4 lg:px-6 xl:px-4 py-10">
+        <div className="mb-6 sm:mb-8">
+          <h1 className="text-2xl sm:text-3xl font-black text-[#2e1a08] mb-2">تکمیل سفارش</h1>
+          <p className="text-[#6d4014] text-sm sm:text-base">اطلاعات گیرنده و آدرس را کامل کنید تا سفارش شما ثبت شود.</p>
         </div>
 
-        <div className="grid lg:grid-cols-3 gap-6">
+        <div className="grid lg:grid-cols-3 gap-6 xl:gap-8">
           <div className="lg:col-span-2 bg-white border border-[#e8cfa8] rounded-[32px] p-5 md:p-7">
             <h2 className="text-xl font-bold text-[#2e1a08] mb-5">اطلاعات خریدار</h2>
 
-            <div className="grid md:grid-cols-2 gap-4">
+            <div className="grid sm:grid-cols-2 gap-4">
               {[
                 { key: "firstName", label: "نام", placeholder: "نام" },
                 { key: "lastName", label: "نام خانوادگی", placeholder: "نام خانوادگی" },
@@ -216,17 +216,17 @@ export default function CheckoutPage() {
             </label>
           </div>
 
-          <div className="bg-white border border-[#e8cfa8] rounded-[32px] p-5 h-fit">
+          <div className="bg-white border border-[#e8cfa8] rounded-[32px] p-5 h-fit lg:sticky lg:top-28">
             <h2 className="font-bold text-[#2e1a08] mb-4">خلاصه سفارش</h2>
 
             <div className="space-y-3 mb-4">
               {rows.map((row) => (
-                <div key={row.id} className="flex items-center justify-between gap-3 text-sm border-b border-[#f5e9d5] pb-3">
-                  <div>
-                    <div className="font-medium text-[#4e2e0e]">{row.product?.name}</div>
+                <div key={row.id} className="flex items-start justify-between gap-3 text-sm border-b border-[#f5e9d5] pb-3">
+                  <div className="min-w-0">
+                    <div className="font-medium text-[#4e2e0e] line-clamp-2">{row.product?.name}</div>
                     <div className="text-xs text-[#a96c20]">تعداد: {row.qty.toLocaleString("fa-IR")}</div>
                   </div>
-                  <div className="font-bold text-[#2e1a08]">
+                  <div className="font-bold text-[#2e1a08] shrink-0 text-left">
                     {(((row.product?.price ?? 0) * row.qty)).toLocaleString("fa-IR")} تومان
                   </div>
                 </div>

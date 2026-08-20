@@ -12,8 +12,8 @@ export default function Home() {
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
-      <section className="mx-4 md:mx-auto md:max-w-7xl md:px-4 mt-4 md:mt-6">
-        <div className="relative overflow-hidden bg-gradient-to-br from-[#2e1a08] via-[#4e2e0e] to-[#6d4014] min-h-[560px] flex items-center rounded-[28px] md:rounded-[36px]">
+      <section className="mx-4 lg:mx-auto lg:max-w-7xl lg:px-6 xl:px-4 mt-4 lg:mt-6">
+        <div className="relative overflow-hidden bg-gradient-to-br from-[#2e1a08] via-[#4e2e0e] to-[#6d4014] min-h-[420px] lg:min-h-[520px] xl:min-h-[560px] flex items-center rounded-[28px] md:rounded-[36px]">
         {/* Background pattern */}
         <div className="absolute inset-0 opacity-10">
           <div className="absolute inset-0" style={{
@@ -22,44 +22,44 @@ export default function Home() {
           }}></div>
         </div>
 
-        <div className="relative max-w-7xl mx-auto px-4 py-20 grid md:grid-cols-2 gap-12 items-center w-full">
+        <div className="relative max-w-7xl mx-auto px-4 lg:px-8 xl:px-10 py-12 sm:py-16 lg:py-16 xl:py-20 grid lg:grid-cols-2 gap-8 lg:gap-10 xl:gap-12 items-center w-full">
           <div className="text-right">
-            <div className="inline-flex items-center gap-2 bg-[#d4a96a]/20 border border-[#d4a96a]/30 rounded-full px-4 py-1.5 mb-6">
-              <span className="w-2 h-2 bg-[#d4a96a] rounded-full animate-pulse"></span>
-              <span className="text-[#d4a96a] text-sm font-medium">کلکسیون ویژه حروف کالیگرافی چوبی</span>
+            <div className="inline-flex items-center gap-2 bg-[#d4a96a]/20 border border-[#d4a96a]/30 rounded-full px-3 sm:px-4 py-1.5 mb-5 sm:mb-6 max-w-full">
+              <span className="w-2 h-2 bg-[#d4a96a] rounded-full animate-pulse shrink-0"></span>
+              <span className="text-[#d4a96a] text-xs sm:text-sm font-medium">کلکسیون ویژه حروف کالیگرافی چوبی</span>
             </div>
-            <h1 className="text-4xl md:text-5xl font-black text-white leading-tight mb-5">
+            <h1 className="text-3xl sm:text-4xl lg:text-[2.75rem] xl:text-5xl font-black text-white leading-tight mb-4 sm:mb-5">
               جلوه واقعی
               <br />
               <span className="text-[#d4a96a]">حروف کالیگرافی روی چوب</span>
             </h1>
-            <p className="text-[#c2883a] text-lg leading-8 mb-8 max-w-md">
+            <p className="text-[#c2883a] text-base sm:text-lg leading-8 mb-6 sm:mb-8 max-w-md xl:max-w-lg">
               مجموعه‌ای از تابلوها و حروف کالیگرافی چوبی با الهام از دکور ایرانی، برای خانه، محل کار و هدیه‌های خاص.
             </p>
-            <div className="flex flex-wrap gap-4">
+            <div className="flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-4">
               <Link
                 href="/products?cat=calligraphy"
-                className="bg-[#d4a96a] hover:bg-[#c2883a] text-[#2e1a08] font-bold px-8 py-3.5 rounded-full transition-all hover:shadow-xl hover:shadow-[#d4a96a]/30 text-base"
+                className="bg-[#d4a96a] hover:bg-[#c2883a] text-[#2e1a08] font-bold px-6 sm:px-8 py-3.5 rounded-full transition-all hover:shadow-xl hover:shadow-[#d4a96a]/30 text-sm sm:text-base text-center"
               >
                 مشاهده حروف کالیگرافی
               </Link>
               <Link
                 href="/about"
-                className="border border-[#d4a96a]/50 hover:border-[#d4a96a] text-[#d4a96a] font-medium px-8 py-3.5 rounded-full transition-all hover:bg-[#d4a96a]/10 text-base"
+                className="border border-[#d4a96a]/50 hover:border-[#d4a96a] text-[#d4a96a] font-medium px-6 sm:px-8 py-3.5 rounded-full transition-all hover:bg-[#d4a96a]/10 text-sm sm:text-base text-center"
               >
                 درباره ما
               </Link>
             </div>
 
             {/* Stats */}
-            <div className="flex gap-8 mt-10">
+            <div className="flex flex-wrap gap-6 sm:gap-8 xl:gap-10 mt-8 sm:mt-10">
               {[
                 { value: "۸۰+", label: "مدل کالیگرافی" },
                 { value: "۳۰۰۰+", label: "سفارش موفق" },
                 { value: "۱۰", label: "سال تجربه" },
               ].map((stat) => (
                 <div key={stat.label}>
-                  <div className="text-2xl font-black text-[#d4a96a]">{stat.value}</div>
+                  <div className="text-xl sm:text-2xl xl:text-3xl font-black text-[#d4a96a]">{stat.value}</div>
                   <div className="text-xs text-[#a96c20] mt-0.5">{stat.label}</div>
                 </div>
               ))}
@@ -67,7 +67,7 @@ export default function Home() {
           </div>
 
           {/* Hero image grid */}
-          <div className="hidden md:grid grid-cols-2 gap-3">
+          <div className="hidden lg:grid grid-cols-2 gap-3 xl:gap-4">
             {[
               "/images/calligraphy/calligraphy-1.jpg",
               "/images/calligraphy/calligraphy-2.jpg",
@@ -91,18 +91,18 @@ export default function Home() {
       </section>
 
       {/* Categories */}
-      <section className="py-16 max-w-7xl mx-auto px-4">
-        <div className="flex items-center justify-between mb-8">
+      <section className="py-12 sm:py-16 lg:py-20 max-w-7xl mx-auto px-4 lg:px-6 xl:px-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6 sm:mb-8">
           <div>
-            <h2 className="text-2xl font-bold text-[#2e1a08]">دسته‌بندی‌ها</h2>
+            <h2 className="text-xl sm:text-2xl xl:text-[1.75rem] font-bold text-[#2e1a08]">دسته‌بندی‌ها</h2>
             <p className="text-[#a96c20] text-sm mt-1">محصولات ما را بر اساس دسته‌بندی مشاهده کنید</p>
           </div>
-          <Link href="/products" className="text-sm text-[#a96c20] hover:text-[#6d4014] font-medium border border-[#e8cfa8] hover:border-[#a96c20] px-4 py-2 rounded-full transition-all">
+          <Link href="/products" className="self-start text-sm text-[#a96c20] hover:text-[#6d4014] font-medium border border-[#e8cfa8] hover:border-[#a96c20] px-4 py-2 rounded-full transition-all">
             همه دسته‌ها ←
           </Link>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-3 sm:gap-4">
           {categories.map((cat) => (
             <Link
               key={cat.id}
@@ -127,33 +127,33 @@ export default function Home() {
       </section>
 
       {/* Banner */}
-      <section className="mx-4 md:mx-auto max-w-7xl md:px-4 mb-16">
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-l from-[#6d4014] to-[#2e1a08] p-8 md:p-12">
+      <section className="mx-4 lg:mx-auto max-w-7xl lg:px-6 xl:px-4 mb-12 lg:mb-16">
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-l from-[#6d4014] to-[#2e1a08] p-6 sm:p-8 lg:p-10 xl:p-12">
           <div className="absolute top-0 left-0 right-0 bottom-0 opacity-5" style={{
             backgroundImage: "url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\")",
           }}></div>
-          <div className="relative grid md:grid-cols-2 gap-6 items-center">
+          <div className="relative grid lg:grid-cols-2 gap-6 lg:gap-10 items-center">
             <div>
               <span className="text-[#d4a96a] text-sm font-medium mb-2 block">پیشنهاد ویژه هفته</span>
-              <h3 className="text-3xl font-black text-white mb-3">تا ۳۰٪ تخفیف<br/>روی حروف کالیگرافی</h3>
-              <p className="text-[#c2883a] mb-6 leading-7">مدل‌های دیواری، آینه‌ای و دکوراتیو با عکس‌های واقعی و موجودی محدود.</p>
+              <h3 className="text-2xl sm:text-3xl xl:text-4xl font-black text-white mb-3">تا ۳۰٪ تخفیف<br/>روی حروف کالیگرافی</h3>
+              <p className="text-[#c2883a] mb-6 leading-7 text-sm sm:text-base max-w-lg">مدل‌های دیواری، آینه‌ای و دکوراتیو با عکس‌های واقعی و موجودی محدود.</p>
               <Link
                 href="/products?cat=calligraphy&sale=true"
-                className="inline-block bg-[#d4a96a] text-[#2e1a08] font-bold px-8 py-3 rounded-full hover:bg-[#c2883a] transition-colors"
+                className="inline-block bg-[#d4a96a] text-[#2e1a08] font-bold px-6 sm:px-8 py-3 rounded-full hover:bg-[#c2883a] transition-colors text-sm sm:text-base"
               >
                 خرید مدل‌های تخفیف‌دار
               </Link>
             </div>
-            <div className="hidden md:flex justify-end gap-4">
+            <div className="hidden lg:flex justify-end gap-4">
               <img
                 src="/images/calligraphy/calligraphy-5.jpg"
                 alt=""
-                className="w-40 h-40 object-cover rounded-[18px] border-2 border-[#d4a96a]/30"
+                className="w-36 h-36 xl:w-40 xl:h-40 object-cover rounded-[18px] border-2 border-[#d4a96a]/30"
               />
               <img
                 src="/images/calligraphy/calligraphy-6.jpg"
                 alt=""
-                className="w-40 h-40 object-cover rounded-[18px] border-2 border-[#d4a96a]/30 mt-6"
+                className="w-36 h-36 xl:w-40 xl:h-40 object-cover rounded-[18px] border-2 border-[#d4a96a]/30 mt-6"
               />
             </div>
           </div>
@@ -161,18 +161,18 @@ export default function Home() {
       </section>
 
       {/* Featured products */}
-      <section className="py-4 pb-16 max-w-7xl mx-auto px-4">
-        <div className="flex items-center justify-between mb-8">
+      <section className="py-4 pb-12 sm:pb-16 max-w-7xl mx-auto px-4 lg:px-6 xl:px-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6 sm:mb-8">
           <div>
-            <h2 className="text-2xl font-bold text-[#2e1a08]">محصولات پرفروش</h2>
+            <h2 className="text-xl sm:text-2xl xl:text-[1.75rem] font-bold text-[#2e1a08]">محصولات پرفروش</h2>
             <p className="text-[#a96c20] text-sm mt-1">منتخب‌های پرفروش با تمرکز بر حروف کالیگرافی</p>
           </div>
-          <Link href="/products" className="text-sm text-[#a96c20] hover:text-[#6d4014] font-medium border border-[#e8cfa8] hover:border-[#a96c20] px-4 py-2 rounded-full transition-all">
+          <Link href="/products" className="self-start text-sm text-[#a96c20] hover:text-[#6d4014] font-medium border border-[#e8cfa8] hover:border-[#a96c20] px-4 py-2 rounded-full transition-all">
             همه محصولات ←
           </Link>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-5 xl:gap-6">
           {featuredProducts.map((product) => (
             <ProductCard key={product.id} product={product} />
           ))}
@@ -180,15 +180,15 @@ export default function Home() {
       </section>
 
       {/* Why us */}
-      <section className="mx-4 md:mx-auto md:max-w-7xl md:px-4 py-16 md:py-20">
+      <section className="mx-4 lg:mx-auto lg:max-w-7xl lg:px-6 xl:px-4 py-12 sm:py-16 lg:py-20">
         <div className="bg-[#2e1a08] rounded-[28px] md:rounded-[36px] px-5 md:px-10 py-12 md:py-16">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-black text-white mb-3">چرا پریسما شاپ؟</h2>
-            <p className="text-[#a96c20] max-w-xl mx-auto leading-7">
+          <div className="text-center mb-10 sm:mb-12">
+            <h2 className="text-2xl sm:text-3xl font-black text-white mb-3">چرا پریسما شاپ؟</h2>
+            <p className="text-[#a96c20] max-w-xl mx-auto leading-7 text-sm sm:text-base">
               تخصص ما خلق و عرضه‌ی آثار کالیگرافی چوبیِ اصیل با کیفیت حرفه‌ای است
             </p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6 lg:gap-8">
             {[
               {
                 title: "کیفیت هنری و ماندگار",
@@ -212,7 +212,7 @@ export default function Home() {
                 ),
               },
             ].map((item) => (
-              <div key={item.title} className="bg-[#3d2210] rounded-[22px] p-8 text-center border border-[#6d4014] hover:bg-[#4e2e0e] hover:border-[#a96c20] transition-colors">
+              <div key={item.title} className="bg-[#3d2210] rounded-[22px] p-6 sm:p-8 text-center border border-[#6d4014] hover:bg-[#4e2e0e] hover:border-[#a96c20] transition-colors">
                 <div className="w-14 h-14 bg-[#6d4014] rounded-2xl flex items-center justify-center mx-auto mb-5">
                   <svg className="text-[#d4a96a]" width="28" height="28" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                     {item.icon}
@@ -227,17 +227,17 @@ export default function Home() {
       </section>
 
       {/* New products */}
-      <section className="py-16 max-w-7xl mx-auto px-4">
-        <div className="flex items-center justify-between mb-8">
+      <section className="py-12 sm:py-16 max-w-7xl mx-auto px-4 lg:px-6 xl:px-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6 sm:mb-8">
           <div>
-            <h2 className="text-2xl font-bold text-[#2e1a08]">جدیدترین محصولات</h2>
+            <h2 className="text-xl sm:text-2xl xl:text-[1.75rem] font-bold text-[#2e1a08]">جدیدترین محصولات</h2>
             <p className="text-[#a96c20] text-sm mt-1">تازه‌ترین اضافات فروشگاه</p>
           </div>
-          <Link href="/products?sort=newest" className="text-sm text-[#a96c20] hover:text-[#6d4014] font-medium border border-[#e8cfa8] hover:border-[#a96c20] px-4 py-2 rounded-full transition-all">
+          <Link href="/products?sort=newest" className="self-start text-sm text-[#a96c20] hover:text-[#6d4014] font-medium border border-[#e8cfa8] hover:border-[#a96c20] px-4 py-2 rounded-full transition-all">
             همه محصولات جدید ←
           </Link>
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-5 xl:gap-6">
           {newProducts.map((product) => (
             <ProductCard key={product.id} product={product} />
           ))}
@@ -245,13 +245,13 @@ export default function Home() {
       </section>
 
       {/* Testimonials */}
-      <section className="mx-4 md:mx-auto md:max-w-7xl md:px-4 pb-16">
-        <div className="bg-[#f5e9d5] rounded-[28px] md:rounded-[36px] px-5 md:px-10 py-12 md:py-14 border border-[#e8cfa8]">
-          <div className="text-center mb-10">
-            <h2 className="text-2xl font-bold text-[#2e1a08]">نظرات مشتریان</h2>
+      <section className="mx-4 lg:mx-auto lg:max-w-7xl lg:px-6 xl:px-4 pb-12 sm:pb-16">
+        <div className="bg-[#f5e9d5] rounded-[28px] md:rounded-[36px] px-5 md:px-10 py-10 sm:py-12 md:py-14 border border-[#e8cfa8]">
+          <div className="text-center mb-8 sm:mb-10">
+            <h2 className="text-xl sm:text-2xl font-bold text-[#2e1a08]">نظرات مشتریان</h2>
             <p className="text-[#a96c20] text-sm mt-1">تجربه واقعی خریداران آثار کالیگرافی پریسما شاپ</p>
           </div>
-          <div className="grid md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
             {[
               {
                 name: "علی رضایی",

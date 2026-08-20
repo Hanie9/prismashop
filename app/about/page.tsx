@@ -35,8 +35,8 @@ export default function AboutPage() {
   return (
     <div className="min-h-screen bg-[#faf6ee]">
       {/* Hero */}
-      <section className="mx-4 md:mx-auto md:max-w-7xl md:px-4 mt-4 md:mt-6">
-        <div className="relative overflow-hidden rounded-[28px] md:rounded-[36px] bg-gradient-to-br from-[#2e1a08] via-[#4e2e0e] to-[#6d4014] px-6 py-14 md:px-12 md:py-20">
+      <section className="mx-4 lg:mx-auto lg:max-w-7xl lg:px-6 xl:px-4 mt-4 lg:mt-6">
+        <div className="relative overflow-hidden rounded-[28px] md:rounded-[36px] bg-gradient-to-br from-[#2e1a08] via-[#4e2e0e] to-[#6d4014] px-5 py-10 sm:px-6 sm:py-14 md:px-12 md:py-20">
           <div className="absolute inset-0 opacity-10">
             <div
               className="absolute inset-0"
@@ -47,13 +47,13 @@ export default function AboutPage() {
             />
           </div>
 
-          <div className="relative grid items-center gap-10 md:grid-cols-2">
+          <div className="relative grid items-center gap-10 lg:grid-cols-2">
             <div>
               <span className="mb-5 inline-flex items-center gap-2 rounded-full border border-[#d4a96a]/30 bg-[#d4a96a]/15 px-4 py-1.5 text-sm font-medium text-[#f1d5ad]">
                 <span className="h-2 w-2 rounded-full bg-[#d4a96a] animate-pulse" />
                 داستان پریسما شاپ
               </span>
-              <h1 className="mb-4 text-3xl md:text-5xl font-black leading-tight text-white">
+              <h1 className="mb-4 text-2xl sm:text-3xl md:text-5xl font-black leading-tight text-white">
                 درباره
                 <span className="text-[#d4a96a]"> پریسما شاپ</span>
               </h1>
@@ -62,23 +62,23 @@ export default function AboutPage() {
                 را ساده، امن و لذت‌بخش کند.
               </p>
 
-              <div className="mt-8 flex flex-wrap gap-6 md:gap-10">
+              <div className="mt-8 flex flex-wrap gap-5 sm:gap-6 md:gap-10">
                 {stats.map((stat) => (
                   <div key={stat.label}>
-                    <div className="text-2xl font-black text-[#d4a96a]">{stat.value}</div>
+                    <div className="text-xl sm:text-2xl font-black text-[#d4a96a]">{stat.value}</div>
                     <div className="mt-0.5 text-xs text-[#c2883a]">{stat.label}</div>
                   </div>
                 ))}
               </div>
             </div>
 
-            <div className="relative hidden md:block h-[320px] overflow-hidden rounded-[28px] border-2 border-[#d4a96a]/25">
+            <div className="relative hidden lg:block h-[280px] xl:h-[320px] overflow-hidden rounded-[28px] border-2 border-[#d4a96a]/25">
               <Image
                 src="/images/calligraphy/calligraphy-5.jpg"
                 alt="حروف کالیگرافی پریسما شاپ"
                 fill
                 className="object-cover"
-                sizes="(min-width: 768px) 50vw, 0px"
+                sizes="(min-width: 1024px) 50vw, 0px"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-[#2e1a08]/60 to-transparent" />
             </div>
@@ -87,8 +87,8 @@ export default function AboutPage() {
       </section>
 
       {/* Story */}
-      <section className="max-w-7xl mx-auto px-4 py-14 md:py-16">
-        <div className="grid gap-8 lg:grid-cols-2 lg:items-center">
+      <section className="max-w-7xl mx-auto px-4 lg:px-6 xl:px-4 py-14 md:py-16">
+        <div className="grid gap-8 lg:grid-cols-2 lg:items-center xl:gap-12">
           <div className="relative overflow-hidden rounded-[28px] border border-[#e8cfa8] bg-white shadow-[0_16px_40px_rgba(89,48,10,0.08)]">
             {/* <div className="relative h-64 md:h-80">
               <Image
@@ -132,7 +132,7 @@ export default function AboutPage() {
       </section>
 
       {/* Mission strip */}
-      <section className="mx-4 md:mx-auto md:max-w-7xl md:px-4 pb-8">
+      <section className="mx-4 lg:mx-auto lg:max-w-7xl lg:px-6 xl:px-4 pb-8">
         <div className="rounded-[28px] border border-[#e8cfa8] bg-[#f5e9d5] px-6 py-10 md:px-10 md:py-12 text-center">
           <h2 className="mb-3 text-2xl font-black text-[#2e1a08]">ماموریت ما</h2>
           <p className="mx-auto max-w-2xl text-sm leading-8 text-[#6d4014] md:text-base">
@@ -143,15 +143,15 @@ export default function AboutPage() {
       </section>
 
       {/* CTA */}
-      <section className="max-w-7xl mx-auto px-4 pb-16">
-        <div className="relative overflow-hidden rounded-[28px] border border-[#e8cfa8] bg-white p-8 md:p-10 shadow-[0_16px_40px_rgba(89,48,10,0.08)]">
+      <section className="max-w-7xl mx-auto px-4 lg:px-6 xl:px-4 pb-16">
+        <div className="relative overflow-hidden rounded-[28px] border border-[#e8cfa8] bg-white p-6 sm:p-8 md:p-10 shadow-[0_16px_40px_rgba(89,48,10,0.08)]">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(212,169,106,0.12),transparent_50%)]" />
           <div className="relative flex flex-col md:flex-row md:items-center md:justify-between gap-6">
             <div>
               <h3 className="mb-2 text-xl md:text-2xl font-black text-[#2e1a08]">برای شروع آماده‌اید؟</h3>
               <p className="text-sm text-[#6d4014]">محصولات چوبی و حروف کالیگرافی ما را ببینید.</p>
             </div>
-            <div className="flex flex-col sm:flex-row gap-3">
+            <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
               <Link
                 href="/products"
                 className="rounded-full bg-[#8a5419] px-8 py-3.5 text-center text-sm font-bold text-white shadow-[0_10px_24px_rgba(138,84,25,0.25)] transition-all hover:bg-[#6d4014]"

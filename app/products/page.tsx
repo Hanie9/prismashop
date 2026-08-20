@@ -74,7 +74,7 @@ export default async function ProductsPage({
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 py-8">
+      <div className="max-w-7xl mx-auto px-4 lg:px-6 xl:px-4 py-8">
         <div className="flex flex-col gap-6">
           <ProductsFilterBar
             query={query}
@@ -82,7 +82,6 @@ export default async function ProductsPage({
             price={price}
             sort={sort}
             sale={sale}
-            hasActiveFilters={hasActiveFilters}
             categoryOptions={[
               { value: "", label: "همه دسته‌ها" },
               ...categories.map((cat) => ({ value: cat.id, label: cat.name })),
@@ -102,12 +101,14 @@ export default async function ProductsPage({
 
           <div className="flex-1 min-w-0">
             <div className="bg-white border border-[#e8cfa8] rounded-3xl p-4 md:p-5 mb-6 shadow-sm">
-              <div>
-                <h1 className="text-xl font-bold text-[#2e1a08]">
-                  {categoryName || "همه محصولات"}
-                  <span className="text-sm font-normal text-[#a96c20] mr-2">({filteredProducts.length} محصول)</span>
-                </h1>
-                <p className="text-sm text-[#a96c20] mt-1">نتایج بر اساس دسته، قیمت، وضعیت تخفیف و نوع مرتب‌سازی فیلتر می‌شوند.</p>
+              <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-3">
+                <div>
+                  <h1 className="text-lg sm:text-xl xl:text-2xl font-bold text-[#2e1a08]">
+                    {categoryName || "همه محصولات"}
+                    <span className="text-sm font-normal text-[#a96c20] mr-2">({filteredProducts.length} محصول)</span>
+                  </h1>
+                  <p className="text-sm text-[#a96c20] mt-1">نتایج بر اساس دسته، قیمت، وضعیت تخفیف و نوع مرتب‌سازی فیلتر می‌شوند.</p>
+                </div>
               </div>
 
               {hasActiveFilters && (
@@ -128,7 +129,7 @@ export default async function ProductsPage({
             )}
 
             {filteredProducts.length > 0 ? (
-              <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 xl:gap-5">
                 {filteredProducts.map((product) => (
                   <ProductCard key={product.id} product={product} />
                 ))}

@@ -5,12 +5,15 @@ import Link from "next/link";
 import { products } from "../../data/products";
 import ProductCard from "../../components/ProductCard";
 import { useCart } from "../../components/CartProvider";
+import { useWishlist } from "../../components/WishlistProvider";
 
 export default function ProductDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const { addItem, getItemQty } = useCart();
+  const { isWishlisted, toggleItem } = useWishlist();
   const product = products.find((p) => p.id === Number(id)) ?? products[0];
   const qtyInCart = getItemQty(product.id);
+  const wishlisted = isWishlisted(product.id);
   const related = products.filter((p) => p.id !== product.id && p.category === product.category).slice(0, 4);
   const [selectedImg, setSelectedImg] = useState(0);
   const [qty, setQty] = useState(1);
@@ -27,18 +30,18 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
       {/* Breadcrumb */}
       <div className="bg-white border-b border-[#e8cfa8]">
         <div className="max-w-7xl mx-auto px-4 py-3">
-          <div className="flex items-center gap-2 text-sm text-[#a96c20]">
-            <Link href="/" className="hover:text-[#6d4014]">خانه</Link>
-            <span>/</span>
-            <Link href="/products" className="hover:text-[#6d4014]">محصولات</Link>
-            <span>/</span>
-            <span className="text-[#4e2e0e] font-medium">{product.name}</span>
+          <div className="flex items-center gap-2 text-xs sm:text-sm text-[#a96c20] overflow-x-auto whitespace-nowrap">
+            <Link href="/" className="hover:text-[#6d4014] shrink-0">خانه</Link>
+            <span className="shrink-0">/</span>
+            <Link href="/products" className="hover:text-[#6d4014] shrink-0">محصولات</Link>
+            <span className="shrink-0">/</span>
+            <span className="text-[#4e2e0e] font-medium truncate">{product.name}</span>
           </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="grid md:grid-cols-2 gap-10 bg-white rounded-3xl border border-[#e8cfa8] p-6 md:p-10">
+      <div className="max-w-7xl mx-auto px-4 lg:px-6 xl:px-4 py-6 sm:py-8">
+        <div className="grid lg:grid-cols-2 gap-6 lg:gap-8 xl:gap-12 bg-white rounded-3xl border border-[#e8cfa8] p-4 sm:p-6 lg:p-8 xl:p-10">
           {/* Images */}
           <div>
             <div className="aspect-square rounded-2xl overflow-hidden bg-[#f5e9d5] mb-4 border border-[#e8cfa8]">
@@ -48,12 +51,12 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                 className="w-full h-full object-cover"
               />
             </div>
-            <div className="flex gap-3">
+            <div className="flex gap-2 sm:gap-3 overflow-x-auto pb-1">
               {images.map((img, i) => (
                 <button
                   key={i}
                   onClick={() => setSelectedImg(i)}
-                  className={`w-16 h-16 rounded-xl overflow-hidden border-2 transition-all ${
+                  className={`w-14 h-14 sm:w-16 sm:h-16 shrink-0 rounded-xl overflow-hidden border-2 transition-all ${
                     selectedImg === i ? "border-[#a96c20]" : "border-[#e8cfa8] hover:border-[#c2883a]"
                   }`}
                 >
@@ -66,10 +69,10 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
           {/* Info */}
           <div>
             <div className="text-xs text-[#a96c20] mb-2 font-medium">{product.category}</div>
-            <h1 className="text-2xl font-black text-[#2e1a08] leading-9 mb-3">{product.name}</h1>
+            <h1 className="text-xl sm:text-2xl font-black text-[#2e1a08] leading-9 mb-3">{product.name}</h1>
 
             {/* Rating */}
-            <div className="flex items-center gap-2 mb-5">
+            <div className="flex flex-wrap items-center gap-2 mb-5">
               <div className="flex items-center gap-0.5">
                 {[1, 2, 3, 4, 5].map((s) => (
                   <svg key={s} width="16" height="16" viewBox="0 0 24 24" fill={s <= product.rating ? "#d4a96a" : "none"} stroke="#d4a96a" strokeWidth={2}>
@@ -84,11 +87,11 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
             {/* Price */}
             <div className="flex items-center gap-3 bg-[#fdf8f3] rounded-2xl p-4 mb-6 border border-[#e8cfa8]">
               <div>
-                <div className="text-2xl font-black text-[#4e2e0e]">
+                <div className="text-xl sm:text-2xl font-black text-[#4e2e0e]">
                   {product.price.toLocaleString("fa-IR")} تومان
                 </div>
                 {product.originalPrice && (
-                  <div className="flex items-center gap-2 mt-1">
+                  <div className="flex flex-wrap items-center gap-2 mt-1">
                     <span className="text-sm text-gray-400 line-through">
                       {product.originalPrice.toLocaleString("fa-IR")} تومان
                     </span>
@@ -128,7 +131,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
             {/* CTA buttons */}
             <div className="flex gap-3 mb-6">
               <button
-                className="flex-1 bg-[#6d4014] hover:bg-[#4e2e0e] text-white font-bold py-3.5 rounded-2xl transition-colors text-base"
+                className="flex-1 min-w-0 bg-[#6d4014] hover:bg-[#4e2e0e] text-white font-bold py-3.5 rounded-2xl transition-colors text-sm sm:text-base px-3"
                 onClick={() => {
                   addItem(product.id, qty);
                   setAdded(true);
@@ -138,11 +141,27 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                 {added
                   ? "به سبد اضافه شد"
                   : qtyInCart > 0
-                    ? `افزایش تعداد در سبد (${qtyInCart.toLocaleString("fa-IR")})`
+                    ? `افزایش در سبد (${qtyInCart.toLocaleString("fa-IR")})`
                     : "افزودن به سبد خرید"}
               </button>
-              <button className="w-13 h-13 border-2 border-[#e8cfa8] hover:border-[#c2883a] rounded-2xl flex items-center justify-center text-[#a96c20] hover:text-[#6d4014] transition-all p-3.5">
-                <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <button
+                type="button"
+                aria-label={wishlisted ? "حذف از علاقه‌مندی‌ها" : "افزودن به علاقه‌مندی‌ها"}
+                onClick={() => toggleItem(product.id)}
+                className={`w-14 h-14 shrink-0 border-2 rounded-2xl flex items-center justify-center transition-all ${
+                  wishlisted
+                    ? "border-[#c2883a] bg-[#fff6ea] text-[#a96c20]"
+                    : "border-[#e8cfa8] text-[#a96c20] hover:border-[#c2883a] hover:text-[#6d4014]"
+                }`}
+              >
+                <svg
+                  width="22"
+                  height="22"
+                  viewBox="0 0 24 24"
+                  fill={wishlisted ? "currentColor" : "none"}
+                  stroke="currentColor"
+                  strokeWidth={2}
+                >
                   <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
                 </svg>
               </button>
@@ -150,25 +169,25 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
 
             {/* Meta */}
             <div className="space-y-2 text-sm text-[#a96c20]">
-              <div className="flex gap-2"><span className="font-medium text-[#4e2e0e]">کد محصول:</span> WD-{product.id.toString().padStart(4, "0")}</div>
-              <div className="flex gap-2"><span className="font-medium text-[#4e2e0e]">دسته‌بندی:</span> {product.category}</div>
-              <div className="flex gap-2"><span className="font-medium text-[#4e2e0e]">ارسال:</span> ۲ تا ۵ روز کاری</div>
+              <div className="flex flex-wrap gap-2"><span className="font-medium text-[#4e2e0e]">کد محصول:</span> WD-{product.id.toString().padStart(4, "0")}</div>
+              <div className="flex flex-wrap gap-2"><span className="font-medium text-[#4e2e0e]">دسته‌بندی:</span> {product.category}</div>
+              <div className="flex flex-wrap gap-2"><span className="font-medium text-[#4e2e0e]">ارسال:</span> ۲ تا ۵ روز کاری</div>
             </div>
           </div>
         </div>
 
         {/* Tabs */}
         <div className="mt-8 bg-white rounded-3xl border border-[#e8cfa8] overflow-hidden">
-          <div className="flex border-b border-[#e8cfa8]">
+          <div className="flex border-b border-[#e8cfa8] overflow-x-auto">
             {[
-              { id: "desc", label: "توضیحات محصول" },
-              { id: "specs", label: "مشخصات فنی" },
+              { id: "desc", label: "توضیحات" },
+              { id: "specs", label: "مشخصات" },
               { id: "reviews", label: `نظرات (${product.reviewCount})` },
             ].map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as typeof activeTab)}
-                className={`px-6 py-4 text-sm font-medium transition-colors border-b-2 ${
+                className={`px-4 sm:px-6 py-3.5 sm:py-4 text-xs sm:text-sm font-medium transition-colors border-b-2 whitespace-nowrap shrink-0 ${
                   activeTab === tab.id
                     ? "border-[#6d4014] text-[#6d4014] bg-[#fdf8f3]"
                     : "border-transparent text-[#a96c20] hover:text-[#6d4014]"
@@ -179,7 +198,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
             ))}
           </div>
 
-          <div className="p-8">
+          <div className="p-5 sm:p-8">
             {activeTab === "desc" && (
               <div className="text-sm text-[#4e2e0e] leading-8 max-w-3xl">
                 <p className="mb-4">
@@ -199,8 +218,8 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
               </div>
             )}
             {activeTab === "specs" && (
-              <div className="max-w-2xl">
-                <table className="w-full text-sm">
+              <div className="max-w-2xl overflow-x-auto">
+                <table className="w-full text-sm min-w-[280px]">
                   <tbody>
                     {[
                       ["جنس", "چوب طبیعی (MDF درجه یک)"],
@@ -212,8 +231,8 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                       ["ضمانت", "۷ روز ضمانت بازگشت"],
                     ].map(([key, val], i) => (
                       <tr key={key} className={i % 2 === 0 ? "bg-[#fdf8f3]" : "bg-white"}>
-                        <td className="py-3 px-4 font-medium text-[#4e2e0e] w-40 border border-[#f5e9d5]">{key}</td>
-                        <td className="py-3 px-4 text-[#6d4014] border border-[#f5e9d5]">{val}</td>
+                        <td className="py-3 px-3 sm:px-4 font-medium text-[#4e2e0e] w-1/3 sm:w-40 border border-[#f5e9d5]">{key}</td>
+                        <td className="py-3 px-3 sm:px-4 text-[#6d4014] border border-[#f5e9d5]">{val}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -227,23 +246,23 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                   { name: "رضا کریمی", rating: 4, date: "۸ تیر ۱۴۰۳", text: "محصول خوبیه، فقط بسته‌بندی یکم می‌تونست بهتر باشه. کلاً راضی هستم و دوباره سفارش می‌دم." },
                 ].map((review, i) => (
                   <div key={i} className="border-b border-[#f5e9d5] pb-6 last:border-0">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-[#6d4014] flex items-center justify-center text-white text-sm font-bold">
+                    <div className="flex items-center justify-between gap-3 mb-2">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-8 h-8 shrink-0 rounded-full bg-[#6d4014] flex items-center justify-center text-white text-sm font-bold">
                           {review.name[0]}
                         </div>
-                        <span className="font-medium text-[#2e1a08] text-sm">{review.name}</span>
+                        <span className="font-medium text-[#2e1a08] text-sm truncate">{review.name}</span>
                       </div>
-                      <span className="text-xs text-[#a96c20]">{review.date}</span>
+                      <span className="text-xs text-[#a96c20] shrink-0">{review.date}</span>
                     </div>
-                    <div className="flex gap-0.5 mb-2 mr-11">
+                    <div className="flex gap-0.5 mb-2 mr-0 sm:mr-11">
                       {[1, 2, 3, 4, 5].map((s) => (
                         <svg key={s} width="12" height="12" viewBox="0 0 24 24" fill={s <= review.rating ? "#d4a96a" : "none"} stroke="#d4a96a" strokeWidth={2}>
                           <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
                         </svg>
                       ))}
                     </div>
-                    <p className="text-sm text-[#4e2e0e] leading-7 mr-11">{review.text}</p>
+                    <p className="text-sm text-[#4e2e0e] leading-7 mr-0 sm:mr-11">{review.text}</p>
                   </div>
                 ))}
               </div>
@@ -255,7 +274,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
         {related.length > 0 && (
           <div className="mt-12">
             <h2 className="text-xl font-bold text-[#2e1a08] mb-6">محصولات مرتبط</h2>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
               {related.map((p) => (
                 <ProductCard key={p.id} product={p} />
               ))}

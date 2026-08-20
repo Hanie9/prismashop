@@ -143,13 +143,13 @@ export default function SignupPage() {
           </div>
         </div>
 
-        <div className="mx-auto flex w-full max-w-6xl flex-1 items-center">
-          <div className="grid w-full items-center gap-10 lg:grid-cols-[0.95fr_1.05fr]">
+        <div className="mx-auto flex w-full max-w-6xl flex-1 items-center py-4 lg:py-0">
+          <div className="grid w-full items-center gap-8 lg:gap-12 xl:gap-16 lg:grid-cols-[0.95fr_1.05fr]">
             <div className="hidden lg:block">
               <span className="mb-5 inline-flex rounded-full border border-[#d4a96a]/40 bg-[#d4a96a]/15 px-3 py-1 text-xs font-medium text-[#f1d5ad] backdrop-blur-sm">
                 حساب جدید، تجربه بهتر
               </span>
-              <h2 className="mb-4 text-4xl font-black leading-[1.35] text-white xl:text-5xl">
+              <h2 className="mb-4 text-3xl xl:text-4xl 2xl:text-5xl font-black leading-[1.35] text-white">
                 عضویت در پریسما
                 <br />
                 با پس‌زمینه‌ای هنری
@@ -165,9 +165,9 @@ export default function SignupPage() {
             </div>
 
             <div className="w-full max-w-lg justify-self-center lg:justify-self-end">
-              <div className="rounded-[30px] border border-white/15 bg-white/12 p-7 shadow-[0_24px_80px_rgba(0,0,0,0.32)] backdrop-blur-xl md:p-8">
+              <div className="rounded-[30px] border border-white/15 bg-white/12 p-5 sm:p-7 shadow-[0_24px_80px_rgba(0,0,0,0.32)] backdrop-blur-xl md:p-8">
                 <div className="mb-6 text-center">
-                <h1 className="mb-2 text-2xl font-black text-white">ایجاد حساب کاربری</h1>
+                <h1 className="mb-2 text-xl sm:text-2xl font-black text-white">ایجاد حساب کاربری</h1>
                 <p className="text-sm text-[#f0d3aa]">
                   قبلاً ثبت‌نام کرده‌اید؟{" "}
                   <Link href="/auth/login" className="font-bold text-white hover:text-[#f6dfbc] hover:underline">
@@ -202,7 +202,7 @@ export default function SignupPage() {
               <form onSubmit={handleSubmit} className="space-y-4">
                 {step === 1 ? (
                   <>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <label htmlFor="signup-firstname" className="mb-2 block text-sm font-medium text-[#f7ead3]">
                           نام

@@ -26,16 +26,16 @@ export default function CartPage() {
 
   return (
     <div className="min-h-screen bg-[#faf6ee]">
-      <div className="max-w-7xl mx-auto px-4 py-12">
-        <h1 className="text-3xl font-black text-[#2e1a08] mb-8">سبد خرید</h1>
+      <div className="max-w-7xl mx-auto px-4 lg:px-6 xl:px-4 py-8 sm:py-12">
+        <h1 className="text-2xl sm:text-3xl font-black text-[#2e1a08] mb-6 sm:mb-8">سبد خرید</h1>
         {rows.length === 0 ? (
-          <div className="relative overflow-hidden rounded-[32px] border border-[#e8cfa8] bg-white shadow-[0_20px_50px_rgba(89,48,10,0.08)]">
+          <div className="relative overflow-hidden rounded-[28px] sm:rounded-[32px] border border-[#e8cfa8] bg-white shadow-[0_20px_50px_rgba(89,48,10,0.08)]">
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(212,169,106,0.14),transparent_45%)]" />
             <div className="absolute -left-16 -top-16 h-48 w-48 rounded-full bg-[#fff6ea] blur-3xl" />
             <div className="absolute -bottom-20 -right-10 h-56 w-56 rounded-full bg-[#f5e9d5] blur-3xl" />
 
-            <div className="relative px-6 py-14 md:px-12 md:py-16 text-center">
-              <div className="mx-auto mb-6 flex h-24 w-24 items-center justify-center rounded-[28px] bg-gradient-to-br from-[#fff6ea] to-[#f5e9d5] shadow-[inset_0_1px_0_rgba(255,255,255,0.8),0_12px_30px_rgba(89,48,10,0.1)]">
+            <div className="relative px-5 py-12 sm:px-6 sm:py-14 md:px-12 md:py-16 text-center">
+              <div className="mx-auto mb-6 flex h-20 w-20 sm:h-24 sm:w-24 items-center justify-center rounded-[28px] bg-gradient-to-br from-[#fff6ea] to-[#f5e9d5] shadow-[inset_0_1px_0_rgba(255,255,255,0.8),0_12px_30px_rgba(89,48,10,0.1)]">
                 <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#8a5419" strokeWidth="1.5">
                   <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
                   <line x1="3" y1="6" x2="21" y2="6" />
@@ -47,7 +47,7 @@ export default function CartPage() {
                 هنوز محصولی انتخاب نکرده‌اید
               </span>
 
-              <h2 className="mb-3 text-2xl md:text-3xl font-black text-[#2e1a08]">سبد خرید شما خالی است</h2>
+              <h2 className="mb-3 text-xl sm:text-2xl md:text-3xl font-black text-[#2e1a08]">سبد خرید شما خالی است</h2>
               <p className="mx-auto mb-8 max-w-md text-sm leading-7 text-[#6d4014] md:text-base">
                 محصولات چوبی و حروف کالیگرافی پریسما شاپ را ببینید و اولین انتخاب خود را به سبد اضافه کنید.
               </p>
@@ -85,19 +85,23 @@ export default function CartPage() {
             </div>
           </div>
         ) : (
-          <div className="grid lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2 bg-white border border-[#e8cfa8] rounded-3xl p-5 space-y-4">
+          <div className="grid lg:grid-cols-3 gap-6 xl:gap-8">
+            <div className="lg:col-span-2 bg-white border border-[#e8cfa8] rounded-3xl p-4 sm:p-5 space-y-4">
               {rows.map((row) => (
-                <div key={row.id} className="border border-[#f1dfc4] rounded-2xl p-4 flex gap-4">
-                  <img src={row.product?.image} alt={row.product?.name} className="w-24 h-24 rounded-xl object-cover" />
-                  <div className="flex-1">
-                    <h3 className="font-bold text-[#2e1a08] mb-1">{row.product?.name}</h3>
+                <div key={row.id} className="border border-[#f1dfc4] rounded-2xl p-3 sm:p-4 flex gap-3 sm:gap-4">
+                  <img
+                    src={row.product?.image}
+                    alt={row.product?.name}
+                    className="w-20 h-20 sm:w-24 sm:h-24 lg:w-28 lg:h-28 shrink-0 rounded-xl object-cover"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-bold text-[#2e1a08] mb-1 text-sm sm:text-base leading-6 line-clamp-2">{row.product?.name}</h3>
                     <p className="text-xs text-[#a96c20] mb-3">{row.product?.category}</p>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center border border-[#e8cfa8] rounded-lg">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="flex items-center border border-[#e8cfa8] rounded-lg w-fit">
                         {row.qty === 1 ? (
                           <button
-                            className="px-3 py-1 text-red-600 hover:bg-red-50 rounded-r-lg"
+                            className="px-3 py-2 text-red-600 hover:bg-red-50 rounded-r-lg"
                             onClick={() => removeItem(row.id)}
                             aria-label="حذف آیتم"
                           >
@@ -110,43 +114,43 @@ export default function CartPage() {
                             </svg>
                           </button>
                         ) : (
-                          <button className="px-3 py-1" onClick={() => updateQty(row.id, row.qty - 1)}>−</button>
+                          <button className="px-3 py-2 min-w-10" onClick={() => updateQty(row.id, row.qty - 1)}>−</button>
                         )}
-                        <span className="px-3">{row.qty}</span>
-                        <button className="px-3 py-1" onClick={() => updateQty(row.id, row.qty + 1)}>+</button>
+                        <span className="px-3 py-2 min-w-8 text-center text-sm font-medium">{row.qty}</span>
+                        <button className="px-3 py-2 min-w-10" onClick={() => updateQty(row.id, row.qty + 1)}>+</button>
                       </div>
-                      <div className="text-left">
-                        <p className="font-bold text-[#4e2e0e]">{((row.product?.price ?? 0) * row.qty).toLocaleString("fa-IR")} تومان</p>
-                        <button className="text-xs text-red-600 mt-1" onClick={() => removeItem(row.id)}>حذف</button>
+                      <div className="sm:text-left flex items-center justify-between sm:block gap-3">
+                        <p className="font-bold text-[#4e2e0e] text-sm sm:text-base">{((row.product?.price ?? 0) * row.qty).toLocaleString("fa-IR")} تومان</p>
+                        <button className="text-xs text-red-600 sm:mt-1" onClick={() => removeItem(row.id)}>حذف</button>
                       </div>
                     </div>
                   </div>
                 </div>
               ))}
               <div className="flex flex-wrap gap-3 pt-2">
-                <button onClick={clearCart} className="border border-red-300 text-red-700 px-4 py-2 rounded-xl">
+                <button onClick={clearCart} className="border border-red-300 text-red-700 px-4 py-2.5 rounded-xl text-sm">
                   خالی کردن سبد
                 </button>
-                <Link href="/products" className="border border-[#a96c20] text-[#6d4014] px-4 py-2 rounded-xl">
+                <Link href="/products" className="border border-[#a96c20] text-[#6d4014] px-4 py-2.5 rounded-xl text-sm">
                   ادامه خرید
                 </Link>
               </div>
             </div>
 
-            <div className="bg-white border border-[#e8cfa8] rounded-3xl p-5 h-fit">
+            <div className="bg-white border border-[#e8cfa8] rounded-3xl p-4 sm:p-5 h-fit lg:sticky lg:top-28">
               <h2 className="font-bold text-[#2e1a08] mb-4">خلاصه سفارش</h2>
               <div className="space-y-2 text-sm mb-4">
-                <div className="flex justify-between"><span>جمع جزء</span><span>{subtotal.toLocaleString("fa-IR")} تومان</span></div>
-                <div className="flex justify-between text-green-700"><span>تخفیف</span><span>{discount.toLocaleString("fa-IR")} تومان</span></div>
-                <div className="flex justify-between"><span>ارسال</span><span>{shipping === 0 ? "رایگان" : `${shipping.toLocaleString("fa-IR")} تومان`}</span></div>
-                <div className="flex justify-between font-bold text-[#2e1a08] border-t pt-2"><span>مبلغ نهایی</span><span>{total.toLocaleString("fa-IR")} تومان</span></div>
+                <div className="flex justify-between gap-3"><span>جمع جزء</span><span className="text-left">{subtotal.toLocaleString("fa-IR")} تومان</span></div>
+                <div className="flex justify-between gap-3 text-green-700"><span>تخفیف</span><span className="text-left">{discount.toLocaleString("fa-IR")} تومان</span></div>
+                <div className="flex justify-between gap-3"><span>ارسال</span><span className="text-left">{shipping === 0 ? "رایگان" : `${shipping.toLocaleString("fa-IR")} تومان`}</span></div>
+                <div className="flex justify-between gap-3 font-bold text-[#2e1a08] border-t pt-2"><span>مبلغ نهایی</span><span className="text-left">{total.toLocaleString("fa-IR")} تومان</span></div>
               </div>
-              <div className="flex gap-2 mb-3">
+              <div className="flex flex-col sm:flex-row gap-2 mb-3">
                 <input
                   value={coupon}
                   onChange={(e) => setCoupon(e.target.value)}
                   placeholder="کد تخفیف"
-                  className="flex-1 border border-[#e8cfa8] rounded-xl px-3 py-2 bg-[#fdf8f3]"
+                  className="flex-1 min-w-0 border border-[#e8cfa8] rounded-xl px-3 py-2.5 bg-[#fdf8f3] text-sm"
                   disabled={couponApplied}
                 />
                 {!couponApplied && (
@@ -156,7 +160,7 @@ export default function CartPage() {
                       setCouponApplied(valid);
                       setCouponMessage(valid ? "کد تخفیف با موفقیت اعمال شد." : "کد تخفیف معتبر نیست.");
                     }}
-                    className="bg-[#6d4014] text-white px-3 rounded-xl"
+                    className="bg-[#6d4014] text-white px-4 py-2.5 rounded-xl shrink-0 text-sm"
                   >
                     اعمال
                   </button>

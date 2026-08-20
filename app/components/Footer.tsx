@@ -8,7 +8,7 @@ const footerLinks = {
     { name: "صفحه اصلی", href: "/" },
     { name: "همه محصولات", href: "/products" },
     { name: "حروف کالیگرافی", href: "/products?cat=calligraphy" },
-    { name: "محصولات تخفیف‌دار", href: "/products?sale=true" },
+    { name: "علاقه‌مندی‌ها", href: "/wishlist" },
     { name: "بلاگ", href: "/blog" },
   ],
   support: [
@@ -29,9 +29,9 @@ export default function Footer() {
 
   return (
     <footer className="mt-14 bg-[#1f1207] text-[#f3e2c8]">
-      <div className="max-w-7xl mx-auto px-4 py-7">
+      <div className="max-w-7xl mx-auto px-4 lg:px-6 xl:px-4 py-7">
         <div className="rounded-[26px] border border-[#4a2b10] bg-gradient-to-l from-[#261608] to-[#35200d] px-5 md:px-8 py-6 md:py-7 shadow-[0_18px_40px_rgba(0,0,0,0.2)]">
-          <div className="grid gap-6 md:grid-cols-[1.3fr_1fr_1fr] items-start">
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-[1.3fr_1fr_1fr] items-start">
             <div>
               <div className="flex items-center gap-3">
                 <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-[#8a5419] to-[#4e2e0e] flex items-center justify-center">
@@ -48,7 +48,7 @@ export default function Footer() {
               <p className="mt-3 text-sm leading-7 text-[#e3c091]">
                 آثار چوبی مدرن و حروف کالیگرافی با طراحی خاص برای خانه و محل کار.
               </p>
-              <div className="mt-4 flex items-center gap-2">
+      <div className="mt-4 flex flex-wrap items-center gap-2">
                 <span className="rounded-full bg-[#3b220d] px-3 py-1 text-[11px] text-[#d9b17d]">ارسال سراسری</span>
                 <span className="rounded-full bg-[#3b220d] px-3 py-1 text-[11px] text-[#d9b17d]">ضمانت اصالت</span>
               </div>
@@ -93,9 +93,9 @@ export default function Footer() {
           </div>
         </div>
 
-        <div className="mt-4 flex flex-col md:flex-row items-center justify-between gap-3 text-xs text-[#b98a53]">
+        <div className="mt-4 flex flex-col md:flex-row items-center justify-between gap-3 text-xs text-[#b98a53] text-center md:text-right">
           <span>© ۱۴۰۵ پریسما شاپ. تمامی حقوق محفوظ است.</span>
-          <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
             {footerLinks.support.slice(2).map((item) => (
               <Link key={item.href} href={item.href} className="hover:text-[#f0d3ac]">
                 {item.name}
