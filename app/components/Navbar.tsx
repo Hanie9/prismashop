@@ -30,14 +30,28 @@ function UserIcon() {
 
 function UserSessionBadge({
   displayName,
+  profileHref,
   onLogoutClick,
 }: {
   displayName: string;
+  profileHref?: string | null;
   onLogoutClick: () => void;
 }) {
   return (
-    <div className="hidden lg:flex items-center rounded-full border border-[#ead7bb] bg-[#fffaf5] p-1 pe-1 ps-3 xl:ps-4 transition-colors hover:border-[#d4a96a]">
-      <span className="max-w-[120px] xl:max-w-[180px] truncate pe-2 xl:pe-3 text-sm font-medium text-[#4e2e0e]">{displayName}</span>
+    <div className="hidden lg:flex items-center rounded-full border border-[#ead7bb] bg-[#fffaf5] p-1 pe-1 ps-1 xl:ps-1.5 transition-colors hover:border-[#d4a96a]">
+      {profileHref ? (
+        <Link
+          href={profileHref}
+          title="مشاهده مشخصات حساب"
+          className="max-w-[120px] xl:max-w-[180px] truncate rounded-full px-2.5 xl:px-3 py-1.5 text-sm font-medium text-[#4e2e0e] transition-colors hover:bg-[#f5e9d5] hover:text-[#8a5419]"
+        >
+          {displayName}
+        </Link>
+      ) : (
+        <span className="max-w-[120px] xl:max-w-[180px] truncate pe-2 xl:pe-3 ps-2 text-sm font-medium text-[#4e2e0e]">
+          {displayName}
+        </span>
+      )}
       <button
         type="button"
         onClick={onLogoutClick}
@@ -66,16 +80,30 @@ function LoginAuthLink() {
 
 function UserSessionMobileRow({
   displayName,
+  profileHref,
   onLogoutClick,
+  onProfileClick,
 }: {
   displayName: string;
+  profileHref?: string | null;
   onLogoutClick: () => void;
+  onProfileClick?: () => void;
 }) {
   return (
     <div className="flex items-center justify-between gap-3 px-1 py-1">
       <div className="min-w-0">
         <p className="text-[11px] text-[#a96c20]">حساب کاربری</p>
-        <p className="truncate text-sm font-semibold text-[#3d2410]">{displayName}</p>
+        {profileHref ? (
+          <Link
+            href={profileHref}
+            onClick={onProfileClick}
+            className="block truncate text-sm font-semibold text-[#3d2410] hover:text-[#8a5419]"
+          >
+            {displayName}
+          </Link>
+        ) : (
+          <p className="truncate text-sm font-semibold text-[#3d2410]">{displayName}</p>
+        )}
       </div>
       <button
         type="button"
@@ -179,7 +207,7 @@ export default function Navbar() {
   const { totalItems } = useCart();
   const { totalItems: wishlistCount } = useWishlist();
   const { categories: shopCategories } = useShop();
-  const { isLoggedIn, displayName, logout, isAdmin } = useAuth();
+  const { isLoggedIn, displayName, logout, isAdmin, isCustomer } = useAuth();
   const categories = shopCategories.map((cat) => ({
     name: cat.name,
     href: `/products?cat=${cat.id}`,
@@ -234,6 +262,7 @@ export default function Navbar() {
   };
 
   const session = isLoggedIn;
+  const profileHref = isCustomer ? "/account/profile" : null;
 
   return (
     <header className="sticky top-0 z-50 w-full">
@@ -297,15 +326,11 @@ export default function Navbar() {
                 <LoginAuthLink />
               ) : (
                 <div className="hidden lg:flex items-center gap-2">
-                  {isAdmin && (
-                    <Link
-                      href="/admin"
-                      className="rounded-full border border-[#ead7bb] bg-[#fffaf5] px-3 py-2 text-xs font-bold text-[#8a5419] hover:border-[#d4a96a]"
-                    >
-                      پنل ادمین
-                    </Link>
-                  )}
-                  <UserSessionBadge displayName={displayName} onLogoutClick={() => setLogoutDialogOpen(true)} />
+                  <UserSessionBadge
+                    displayName={displayName}
+                    profileHref={profileHref}
+                    onLogoutClick={() => setLogoutDialogOpen(true)}
+                  />
                 </div>
               )}
 
@@ -391,6 +416,14 @@ export default function Navbar() {
                 className="shrink-0 rounded-full border border-[#f1d6b0] bg-[#fff6ea] px-3 xl:px-4 py-2 text-xs font-semibold text-[#a96c20] hover:border-[#d4a96a] hover:text-[#8a5419] whitespace-nowrap"
               >
                 سفارش‌ها
+              </Link>
+            )}
+            {session && isAdmin && (
+              <Link
+                href="/admin"
+                className="shrink-0 rounded-full border border-[#f1d6b0] bg-[#fff6ea] px-3 xl:px-4 py-2 text-xs font-semibold text-[#a96c20] hover:border-[#d4a96a] hover:text-[#8a5419] whitespace-nowrap"
+              >
+                پنل ادمین
               </Link>
             )}
           </div>
@@ -481,6 +514,15 @@ export default function Navbar() {
                   <span>سفارش‌ها</span>
                 </Link>
               )}
+              {session && isAdmin && (
+                <Link
+                  href="/admin"
+                  onClick={closeMenu}
+                  className="flex items-center justify-between rounded-2xl px-3.5 py-3 text-sm font-semibold text-[#a96c20] hover:bg-[#fff6ea]"
+                >
+                  <span>پنل ادمین</span>
+                </Link>
+              )}
             </div>
 
             <div className="overflow-hidden rounded-2xl border border-[#ead7bb] bg-white">
@@ -526,7 +568,12 @@ export default function Navbar() {
               </Link>
             ) : (
               <div className="space-y-2">
-                <UserSessionMobileRow displayName={displayName} onLogoutClick={() => setLogoutDialogOpen(true)} />
+                <UserSessionMobileRow
+                  displayName={displayName}
+                  profileHref={profileHref}
+                  onLogoutClick={() => setLogoutDialogOpen(true)}
+                  onProfileClick={closeMenu}
+                />
               </div>
             )}
           </div>

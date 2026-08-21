@@ -125,6 +125,16 @@ class CustomerProfileUpdate(CamelModel):
     postal_code: str | None = None
 
 
+class ChangePasswordRequest(CamelModel):
+    current_password: str = Field(min_length=1, max_length=128)
+    new_password: str = Field(min_length=8, max_length=128)
+
+    @field_validator("new_password")
+    @classmethod
+    def validate_new_password(cls, v: str) -> str:
+        return normalize_password(v)
+
+
 class AdminOut(CamelModel):
     id: int
     email: EmailStr

@@ -130,18 +130,71 @@ export default function CartPage() {
       <div className="max-w-7xl mx-auto px-4 lg:px-6 xl:px-4 py-8 sm:py-12">
         <h1 className="mb-6 text-2xl font-black text-[#2e1a08] sm:mb-8 sm:text-3xl">سبد خرید</h1>
         {rows.length === 0 ? (
-          <div className="relative overflow-hidden rounded-[28px] sm:rounded-[32px] border border-[#e8cfa8] bg-white shadow-[0_20px_50px_rgba(89,48,10,0.08)]">
-            <div className="relative px-5 py-12 sm:px-6 sm:py-14 md:px-12 md:py-16 text-center">
-              <h2 className="mb-3 text-xl sm:text-2xl md:text-3xl font-black text-[#2e1a08]">سبد خرید شما خالی است</h2>
-              <p className="mx-auto mb-8 max-w-md text-sm leading-7 text-[#6d4014] md:text-base">
-                محصولات چوبی و حروف کالیگرافی پریسما شاپ را ببینید و اولین انتخاب خود را به سبد اضافه کنید.
+          <div className="relative overflow-hidden rounded-[28px] border border-[#e8cfa8] bg-gradient-to-b from-white via-[#fffdf9] to-[#fff8ef] shadow-[0_20px_50px_rgba(89,48,10,0.08)] sm:rounded-[36px]">
+            <div
+              className="pointer-events-none absolute inset-0 opacity-[0.35]"
+              style={{
+                backgroundImage: `radial-gradient(circle at 20% 20%, rgba(212,169,106,0.22), transparent 42%),
+                  radial-gradient(circle at 85% 75%, rgba(138,84,25,0.08), transparent 45%)`,
+              }}
+            />
+            <div className="pointer-events-none absolute -left-20 -top-24 h-56 w-56 rounded-full bg-[#fff1dc] blur-3xl" />
+            <div className="pointer-events-none absolute -bottom-28 -right-16 h-64 w-64 rounded-full bg-[#f3e2c8] blur-3xl" />
+
+            <div className="relative px-5 py-14 text-center sm:px-8 sm:py-16 md:px-14 md:py-20">
+              <div className="relative mx-auto mb-7 h-28 w-28 sm:mb-8 sm:h-32 sm:w-32">
+                <div className="absolute inset-3 rounded-[30px] bg-[#f5e9d5]/70 blur-md" />
+                <div className="relative flex h-full w-full items-center justify-center rounded-[30px] border border-[#ead7bb]/80 bg-gradient-to-br from-[#fffaf5] to-[#f5e9d5] shadow-[inset_0_1px_0_rgba(255,255,255,0.85),0_16px_36px_rgba(89,48,10,0.12)]">
+                  <svg
+                    width="52"
+                    height="52"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="#8a5419"
+                    strokeWidth="1.4"
+                    className="sm:h-[56px] sm:w-[56px]"
+                  >
+                    <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
+                    <line x1="3" y1="6" x2="21" y2="6" />
+                    <path d="M16 10a4 4 0 0 1-8 0" />
+                  </svg>
+                </div>
+                <span className="absolute -bottom-1 -left-1 flex h-9 w-9 items-center justify-center rounded-full border border-[#ead7bb] bg-white text-xs font-black text-[#a96c20] shadow-sm">
+                  ۰
+                </span>
+              </div>
+
+              <span className="mb-4 inline-flex items-center gap-2 rounded-full border border-[#ead7bb] bg-white/80 px-4 py-1.5 text-xs font-medium text-[#a96c20] backdrop-blur-sm">
+                <span className="h-1.5 w-1.5 rounded-full bg-[#d4a96a]" />
+                سبد آماده انتخاب‌های تازه است
+              </span>
+
+              <h2 className="mb-3 text-2xl font-black tracking-tight text-[#2e1a08] sm:text-3xl md:text-[2.1rem]">
+                هنوز چیزی در سبد نیست
+              </h2>
+              <p className="mx-auto mb-9 max-w-lg text-sm leading-8 text-[#6d4014] md:text-base">
+                از میان تابلوها و حروف کالیگرافی چوبی، اثر مورد علاقه‌تان را انتخاب کنید
+                و خرید را با چند کلیک کامل کنید.
               </p>
-              <Link
-                href="/products"
-                className="inline-flex rounded-full bg-[#8a5419] px-8 py-3.5 text-sm font-bold text-white"
-              >
-                مشاهده محصولات
-              </Link>
+
+              <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
+                <Link
+                  href="/products"
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#8a5419] px-8 py-3.5 text-sm font-bold text-white shadow-[0_12px_28px_rgba(138,84,25,0.28)] transition-all hover:-translate-y-0.5 hover:bg-[#6d4014] sm:w-auto"
+                >
+                  شروع خرید
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2}>
+                    <path d="M19 12H5" />
+                    <path d="m12 19-7-7 7-7" />
+                  </svg>
+                </Link>
+                <Link
+                  href="/products?cat=calligraphy"
+                  className="inline-flex w-full items-center justify-center rounded-full border border-[#e8cfa8] bg-white/70 px-8 py-3.5 text-sm font-medium text-[#6d4014] backdrop-blur-sm transition-all hover:border-[#d4a96a] hover:bg-[#fffaf5] hover:text-[#8a5419] sm:w-auto"
+                >
+                  حروف کالیگرافی
+                </Link>
+              </div>
             </div>
           </div>
         ) : (

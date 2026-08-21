@@ -18,6 +18,7 @@ from app.models.session import AuthSession
 from app.models.user import User
 from app.schemas import (
     AdminOut,
+    ChangePasswordRequest,
     CustomerLogin,
     CustomerOut,
     CustomerProfileUpdate,
@@ -207,6 +208,28 @@ def update_me(
     db.commit()
     db.refresh(user)
     return user
+
+
+@router.post("/me/password", response_model=MessageResponse)
+def change_password(
+    payload: ChangePasswordRequest,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    if not verify_password(payload.current_password, user.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="رمز عبور فعلی اشتباه است",
+        )
+    if payload.current_password == payload.new_password:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="رمز جدید باید با رمز فعلی متفاوت باشد",
+        )
+    user.password_hash = hash_password(payload.new_password)
+    db.add(user)
+    db.commit()
+    return MessageResponse(message="رمز عبور با موفقیت تغییر کرد")
 
 
 @router.delete("/me/address", response_model=CustomerOut)

@@ -63,6 +63,13 @@ export default function CheckoutPage() {
   }, [ready, isLoggedIn, router]);
 
   useEffect(() => {
+    if (!trackingCode) return;
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+  }, [trackingCode]);
+
+  useEffect(() => {
     if (profileFilled.current) return;
     if (customer) {
       profileFilled.current = true;
@@ -252,6 +259,7 @@ export default function CheckoutPage() {
       clearCart();
       void refresh();
       clearCoupon();
+      window.scrollTo({ top: 0, left: 0, behavior: "auto" });
     } catch (err) {
       setStockError(
         err instanceof Error ? err.message : "ثبت سفارش انجام نشد. دوباره تلاش کنید.",

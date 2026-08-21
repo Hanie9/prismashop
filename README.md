@@ -49,17 +49,40 @@
 
 - Node.js 20+
 - Python 3.11+
-- PostgreSQL در حال اجرا
+- PostgreSQL محلی (بدون Docker) در حال اجرا
 
 ## راه‌اندازی
 
-### ۱) دیتابیس
+### ۱) دیتابیس (PostgreSQL سیستم)
+
+روی Fedora:
 
 ```bash
-createdb prismashop
+sudo dnf install -y postgresql-server postgresql postgresql-contrib
+sudo postgresql-setup --initdb
+sudo systemctl enable --now postgresql
 ```
 
-در صورت نیاز کاربر/رمز را مطابق `backend/.env.example` بسازید.
+کاربر/دیتابیس مطابق `backend/.env.example`:
+
+```bash
+sudo -u postgres psql <<'SQL'
+CREATE ROLE prisma LOGIN PASSWORD 'prisma';
+CREATE DATABASE prismashop OWNER prisma;
+GRANT ALL PRIVILEGES ON DATABASE prismashop TO prisma;
+\c prismashop
+GRANT ALL ON SCHEMA public TO prisma;
+ALTER SCHEMA public OWNER TO prisma;
+SQL
+```
+
+در `pg_hba.conf` احراز هویت `host` برای `127.0.0.1` و `::1` را `scram-sha-256` کنید، سپس:
+
+```bash
+sudo systemctl reload postgresql
+```
+
+جزئیات بیشتر در [`backend/README.md`](backend/README.md).
 
 ### ۲) بک‌اند
 

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { CartProvider } from "./components/CartProvider";
+import ScrollToTop from "./components/ScrollToTop";
 import { SessionProvider } from "./components/SessionProvider";
 import { ShopProvider } from "./components/ShopProvider";
 import StorefrontChrome from "./components/StorefrontChrome";
@@ -23,6 +24,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <ShopProvider>
             <CartProvider>
               <WishlistProvider>
+                <ScrollToTop />
                 <StorefrontChrome>{children}</StorefrontChrome>
               </WishlistProvider>
             </CartProvider>

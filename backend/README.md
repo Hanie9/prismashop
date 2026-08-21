@@ -1,14 +1,37 @@
 # Prisma Shop — Backend
 
-FastAPI + PostgreSQL (بدون نیاز به Docker برای اجرای محلی).
+FastAPI + PostgreSQL محلی (بدون Docker).
 
 ## پیش‌نیاز
 
 - Python 3.11+
-- PostgreSQL با دیتابیس/کاربر مطابق `.env`
+- PostgreSQL نصب‌شده روی سیستم (سرویس `postgresql`)
+
+### نصب PostgreSQL روی Fedora
 
 ```bash
-createdb prismashop
+sudo dnf install -y postgresql-server postgresql postgresql-contrib
+sudo postgresql-setup --initdb
+sudo systemctl enable --now postgresql
+```
+
+سپس کاربر و دیتابیس مطابق `.env` را بسازید:
+
+```bash
+sudo -u postgres psql <<'SQL'
+CREATE ROLE prisma LOGIN PASSWORD 'prisma';
+CREATE DATABASE prismashop OWNER prisma;
+GRANT ALL PRIVILEGES ON DATABASE prismashop TO prisma;
+\c prismashop
+GRANT ALL ON SCHEMA public TO prisma;
+ALTER SCHEMA public OWNER TO prisma;
+SQL
+```
+
+برای اتصال با رمز از `localhost`، در `/var/lib/pgsql/data/pg_hba.conf` خطوط `host` مربوط به `127.0.0.1/32` و `::1/128` را روی `scram-sha-256` بگذارید و سرویس را reload کنید:
+
+```bash
+sudo systemctl reload postgresql
 ```
 
 ## اجرا
@@ -27,6 +50,12 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 - Health: http://localhost:8000/health
 
 ادمین پس از seed: `admin@prismashop.ir` / `admin123`
+
+قبل از اجرا مطمئن شوید سرویس دیتابیس فعال است:
+
+```bash
+systemctl is-active postgresql
+```
 
 ## ماژول‌های اصلی API
 

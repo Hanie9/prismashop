@@ -58,6 +58,9 @@ export default function AdminOrdersPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [filter, setFilter] = useState<Order["status"] | "all">("all");
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+  const [draftStatus, setDraftStatus] = useState<Record<string, Order["status"]>>({});
+  const [savingId, setSavingId] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState("");
 
   const filtered = useMemo(() => {
     if (filter === "all") return orders;
@@ -65,8 +68,37 @@ export default function AdminOrdersPage() {
   }, [orders, filter]);
 
   const selected = orders.find((o) => o.id === selectedId) ?? null;
+  const selectedDraft = selected
+    ? (draftStatus[selected.id] ?? selected.status)
+    : null;
   const selectedStatusLabel =
-    statusOptions.find((o) => o.value === selected?.status)?.label ?? "";
+    statusOptions.find((o) => o.value === (selectedDraft ?? selected?.status))?.label ?? "";
+
+  const getDraft = (order: Order) => draftStatus[order.id] ?? order.status;
+  const isDirty = (order: Order) => getDraft(order) !== order.status;
+
+  const setDraft = (orderId: string, status: Order["status"]) => {
+    setSaveError("");
+    setDraftStatus((prev) => ({ ...prev, [orderId]: status }));
+  };
+
+  const saveStatus = async (order: Order) => {
+    const next = getDraft(order);
+    if (next === order.status) return;
+    setSavingId(order.id);
+    setSaveError("");
+    try {
+      await updateOrderStatus(order.id, next);
+      setDraftStatus((prev) => {
+        const { [order.id]: _, ...rest } = prev;
+        return rest;
+      });
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : "ذخیره وضعیت ناموفق بود.");
+    } finally {
+      setSavingId(null);
+    }
+  };
 
   return (
     <div className="space-y-5">
@@ -88,6 +120,12 @@ export default function AdminOrdersPage() {
           />
         ))}
       </div>
+
+      {saveError && (
+        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {saveError}
+        </div>
+      )}
 
       {filtered.length === 0 ? (
         <div className="rounded-3xl border border-[#ead7bb] bg-white py-16 text-center text-sm text-[#a96c20]">
@@ -116,25 +154,35 @@ export default function AdminOrdersPage() {
                     phone={order.customer.phone}
                   />
                 </div>
-                <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
+                <div className="mt-3 flex flex-col gap-2">
                   <SelectDropdown
                     id={`mobile-${order.id}`}
                     label="وضعیت سفارش"
-                    value={order.status}
+                    value={getDraft(order)}
                     options={statusOptions}
                     open={openDropdown === `mobile-${order.id}`}
                     onOpenChange={setOpenDropdown}
-                    onChange={(value) => updateOrderStatus(order.id, value as Order["status"])}
+                    onChange={(value) => setDraft(order.id, value as Order["status"])}
                     size="sm"
-                    className="flex-1"
+                    className="w-full"
                   />
-                  <button
-                    type="button"
-                    onClick={() => setSelectedId(order.id)}
-                    className="rounded-2xl border border-[#e8cfa8] bg-[#fffaf5] px-4 py-2 text-xs font-medium text-[#6d4014]"
-                  >
-                    جزئیات
-                  </button>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      disabled={!isDirty(order) || savingId === order.id}
+                      onClick={() => void saveStatus(order)}
+                      className="flex-1 rounded-2xl bg-[#6d4014] px-4 py-2 text-xs font-bold text-white hover:bg-[#4e2e0e] disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      {savingId === order.id ? "در حال ذخیره..." : "ذخیره وضعیت"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedId(order.id)}
+                      className="rounded-2xl border border-[#e8cfa8] bg-[#fffaf5] px-4 py-2 text-xs font-medium text-[#6d4014]"
+                    >
+                      جزئیات
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}
@@ -148,7 +196,7 @@ export default function AdminOrdersPage() {
                     <th className="px-4 py-3 text-right font-medium">کد پیگیری</th>
                     <th className="px-4 py-3 text-right font-medium">مشتری</th>
                     <th className="px-4 py-3 text-right font-medium">مبلغ</th>
-                    <th className="w-48 px-4 py-3 text-right font-medium">وضعیت</th>
+                    <th className="min-w-[16rem] px-4 py-3 text-right font-medium">وضعیت</th>
                     <th className="px-4 py-3 text-right font-medium">جزئیات</th>
                   </tr>
                 </thead>
@@ -171,20 +219,28 @@ export default function AdminOrdersPage() {
                       <td className="px-4 py-3 align-middle whitespace-nowrap">
                         <p className="font-black text-[#4e2e0e]">{formatMoney(order.total)}</p>
                       </td>
-                      <td className="w-48 px-4 py-3 align-middle">
-                        <SelectDropdown
-                          id={`desk-${order.id}`}
-                          label="وضعیت سفارش"
-                          value={order.status}
-                          options={statusOptions}
-                          open={openDropdown === `desk-${order.id}`}
-                          onOpenChange={setOpenDropdown}
-                          onChange={(value) =>
-                            updateOrderStatus(order.id, value as Order["status"])
-                          }
-                          size="sm"
-                          className="w-full max-w-[11.5rem]"
-                        />
+                      <td className="min-w-[16rem] px-4 py-3 align-middle">
+                        <div className="flex items-center gap-2">
+                          <SelectDropdown
+                            id={`desk-${order.id}`}
+                            label="وضعیت سفارش"
+                            value={getDraft(order)}
+                            options={statusOptions}
+                            open={openDropdown === `desk-${order.id}`}
+                            onOpenChange={setOpenDropdown}
+                            onChange={(value) => setDraft(order.id, value as Order["status"])}
+                            size="sm"
+                            className="w-full max-w-[11.5rem]"
+                          />
+                          <button
+                            type="button"
+                            disabled={!isDirty(order) || savingId === order.id}
+                            onClick={() => void saveStatus(order)}
+                            className="shrink-0 rounded-2xl bg-[#6d4014] px-3 py-2 text-xs font-bold text-white hover:bg-[#4e2e0e] disabled:cursor-not-allowed disabled:opacity-40"
+                          >
+                            {savingId === order.id ? "..." : "ذخیره"}
+                          </button>
+                        </div>
                       </td>
                       <td className="px-4 py-3 align-middle">
                         <button
@@ -229,15 +285,26 @@ export default function AdminOrdersPage() {
             <div className="space-y-4 p-4 sm:p-6">
               <div className="rounded-3xl border border-[#ead7bb] bg-white p-4">
                 <p className="mb-3 text-xs font-bold text-[#a96c20]">وضعیت سفارش</p>
-                <SelectDropdown
-                  id={`detail-${selected.id}`}
-                  label="وضعیت سفارش"
-                  value={selected.status}
-                  options={statusOptions}
-                  open={openDropdown === `detail-${selected.id}`}
-                  onOpenChange={setOpenDropdown}
-                  onChange={(value) => updateOrderStatus(selected.id, value as Order["status"])}
-                />
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                  <SelectDropdown
+                    id={`detail-${selected.id}`}
+                    label="وضعیت سفارش"
+                    value={selectedDraft ?? selected.status}
+                    options={statusOptions}
+                    open={openDropdown === `detail-${selected.id}`}
+                    onOpenChange={setOpenDropdown}
+                    onChange={(value) => setDraft(selected.id, value as Order["status"])}
+                    className="flex-1"
+                  />
+                  <button
+                    type="button"
+                    disabled={!isDirty(selected) || savingId === selected.id}
+                    onClick={() => void saveStatus(selected)}
+                    className="rounded-2xl bg-[#6d4014] px-5 py-2.5 text-sm font-bold text-white hover:bg-[#4e2e0e] disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    {savingId === selected.id ? "در حال ذخیره..." : "ذخیره وضعیت"}
+                  </button>
+                </div>
               </div>
 
               <div className="rounded-3xl border border-[#ead7bb] bg-white p-4 sm:p-5">

@@ -243,6 +243,11 @@ export const api = {
   me: () => apiFetch<CustomerProfile>("/api/auth/me"),
   updateProfile: (body: Record<string, unknown>) =>
     apiFetch<CustomerProfile>("/api/auth/me", { method: "PATCH", body }),
+  changePassword: (currentPassword: string, newPassword: string) =>
+    apiFetch<{ message: string }>("/api/auth/me/password", {
+      method: "POST",
+      body: { currentPassword, newPassword },
+    }),
   adminMe: () => apiFetch<AdminProfile>("/api/auth/admin/me"),
 
   listProducts: (params?: Record<string, string | number | boolean | undefined>) => {

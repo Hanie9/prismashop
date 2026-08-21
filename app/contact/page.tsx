@@ -82,20 +82,20 @@ export default function ContactPage() {
                 type="tel"
                 inputMode="numeric"
                 pattern="09[0-9]{9}"
-                className="border border-[#e8cfa8] rounded-xl p-3 bg-[#fdf8f3]"
+                className="border border-[#e8cfa8] rounded-xl p-3 bg-[#fdf8f3] placeholder:text-right"
                 placeholder="شماره موبایل"
                 value={form.mobile}
                 onChange={(e) => setForm({ ...form, mobile: e.target.value })}
-                dir="ltr"
+                dir={form.mobile ? "ltr" : "rtl"}
                 required
               />
               <input
                 type="email"
-                className="border border-[#e8cfa8] rounded-xl p-3 bg-[#fdf8f3]"
+                className="border border-[#e8cfa8] rounded-xl p-3 bg-[#fdf8f3] placeholder:text-right"
                 placeholder="ایمیل"
                 value={form.email}
                 onChange={(e) => setForm({ ...form, email: e.target.value })}
-                dir="ltr"
+                dir={form.email ? "ltr" : "rtl"}
                 required
               />
               <input
