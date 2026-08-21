@@ -1,3 +1,5 @@
+import { api, setStoredSessionId } from "./api";
+
 export const ADMIN_CREDENTIALS = {
   email: "admin@prismashop.ir",
   password: "admin123",
@@ -13,6 +15,7 @@ export function normalizeAdminPassword(value: string) {
   return value.trim();
 }
 
+/** @deprecated Prefer API admin login; kept for UI defaults only */
 export function isAdminCredentials(email: string, password: string) {
   return (
     normalizeAdminEmail(email) === ADMIN_CREDENTIALS.email &&
@@ -33,4 +36,20 @@ export function clearAdminSession() {
 export function getAdminSession(): boolean {
   if (typeof window === "undefined") return false;
   return window.localStorage.getItem(ADMIN_SESSION_KEY) === "1";
+}
+
+export async function loginAdmin(email: string, password: string) {
+  const session = await api.adminLogin(email, password);
+  setStoredSessionId(session.sessionId);
+  setAdminSession();
+  return session;
+}
+
+export async function logoutAdmin() {
+  try {
+    await api.logout();
+  } catch {
+    /* ignore */
+  }
+  clearAdminSession();
 }

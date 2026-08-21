@@ -1,0 +1,11 @@
+fastapi
+uvicorn[standard]
+sqlalchemy>=2.0.40
+psycopg[binary]
+pydantic-settings
+python-jose[cryptography]
+bcrypt
+python-multipart
+email-validator
+pillow
+httpx

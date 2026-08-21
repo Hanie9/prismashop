@@ -4,8 +4,12 @@ import { FormEvent, useMemo, useState } from "react";
 import DialogCloseButton from "../../components/DialogCloseButton";
 import MultiImageUploadField from "../../components/MultiImageUploadField";
 import { useShop } from "../../components/ShopProvider";
+import {
+  DEFAULT_PRODUCT_SPECS,
+  normalizeSpecs,
+} from "../../lib/product-content";
 import { getProductCover, getProductImages, syncProductImages } from "../../lib/product-images";
-import type { Product } from "../../lib/shop-types";
+import type { Product, ProductSpec } from "../../lib/shop-types";
 
 const emptyForm = {
   name: "",
@@ -13,12 +17,13 @@ const emptyForm = {
   discountPercent: "",
   images: [] as string[],
   categoryId: "",
-  rating: "4",
-  reviewCount: "0",
   isNew: false,
   stock: "10",
   lowStockThreshold: "5",
   description: "",
+  detailParagraphs: [""] as string[],
+  highlights: [""] as string[],
+  specs: DEFAULT_PRODUCT_SPECS.map((s) => ({ ...s })) as ProductSpec[],
   active: true,
 };
 
@@ -86,12 +91,16 @@ export default function AdminProductsPage() {
       discountPercent: discount > 0 ? String(discount) : "",
       images: getProductImages(product),
       categoryId: product.categoryId,
-      rating: String(product.rating),
-      reviewCount: String(product.reviewCount),
       isNew: Boolean(product.isNew),
       stock: String(product.stock),
       lowStockThreshold: String(product.lowStockThreshold),
       description: product.description ?? "",
+      detailParagraphs:
+        product.detailParagraphs?.length ? [...product.detailParagraphs] : [""],
+      highlights: product.highlights?.length ? [...product.highlights] : [""],
+      specs: product.specs?.length
+        ? normalizeSpecs(product.specs)
+        : DEFAULT_PRODUCT_SPECS.map((s) => ({ ...s })),
       active: product.active,
     });
     setOpen(true);
@@ -130,13 +139,16 @@ export default function AdminProductsPage() {
       ...imageFields,
       category: category.name,
       categoryId: category.id,
-      rating: Math.min(5, Math.max(1, Number(form.rating) || 4)),
-      reviewCount: Math.max(0, Number(form.reviewCount) || 0),
       isNew: form.isNew,
       discount,
       stock: Math.max(0, Number(form.stock) || 0),
       lowStockThreshold: Math.max(1, Number(form.lowStockThreshold) || 5),
       description: form.description.trim(),
+      detailParagraphs: form.detailParagraphs.map((p) => p.trim()).filter(Boolean),
+      highlights: form.highlights.map((h) => h.trim()).filter(Boolean),
+      specs: form.specs
+        .map((s) => ({ label: s.label.trim(), value: s.value.trim() }))
+        .filter((s) => s.label && s.value),
       active: form.active,
     };
 
@@ -399,26 +411,6 @@ export default function AdminProductsPage() {
                   dir="ltr"
                 />
               </Field>
-              <Field label="امتیاز (۱ تا ۵)">
-                <input
-                  type="number"
-                  min={1}
-                  max={5}
-                  value={form.rating}
-                  onChange={(e) => setForm({ ...form, rating: e.target.value })}
-                  className={inputClass}
-                  dir="ltr"
-                />
-              </Field>
-              <Field label="تعداد نظرات">
-                <input
-                  type="number"
-                  value={form.reviewCount}
-                  onChange={(e) => setForm({ ...form, reviewCount: e.target.value })}
-                  className={inputClass}
-                  dir="ltr"
-                />
-              </Field>
 
               <div className="sm:col-span-2">
                 <MultiImageUploadField
@@ -428,15 +420,177 @@ export default function AdminProductsPage() {
                 />
               </div>
 
-              <div className="sm:col-span-2">
-                <Field label="توضیحات">
+              <div className="sm:col-span-2 space-y-4 rounded-2xl border border-[#ead7bb] bg-[#fffaf5] p-4">
+                <div>
+                  <h3 className="text-sm font-bold text-[#2e1a08]">محتوای صفحه محصول</h3>
+                  <p className="mt-1 text-xs leading-6 text-[#a96c20]">
+                    این بخش دقیقاً مطابق تب‌های «توضیحات» و «مشخصات» در صفحه محصول فروشگاه پر می‌شود.
+                  </p>
+                </div>
+
+                <Field label="خلاصه کوتاه (زیر عنوان محصول)">
                   <textarea
-                    rows={3}
+                    rows={2}
                     value={form.description}
                     onChange={(e) => setForm({ ...form, description: e.target.value })}
                     className={inputClass}
+                    placeholder="یک یا دو جمله کوتاه برای معرفی محصول"
                   />
                 </Field>
+
+                <div>
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <span className="text-sm font-medium text-[#4e2e0e]">پاراگراف‌های توضیحات</span>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setForm({ ...form, detailParagraphs: [...form.detailParagraphs, ""] })
+                      }
+                      className="text-xs font-medium text-[#8a5419] hover:underline"
+                    >
+                      + پاراگراف
+                    </button>
+                  </div>
+                  <div className="space-y-2">
+                    {form.detailParagraphs.map((paragraph, index) => (
+                      <div key={`p-${index}`} className="flex gap-2">
+                        <textarea
+                          rows={2}
+                          value={paragraph}
+                          onChange={(e) => {
+                            const next = [...form.detailParagraphs];
+                            next[index] = e.target.value;
+                            setForm({ ...form, detailParagraphs: next });
+                          }}
+                          className={inputClass}
+                          placeholder={`پاراگراف ${index + 1}`}
+                        />
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setForm({
+                              ...form,
+                              detailParagraphs: form.detailParagraphs.filter((_, i) => i !== index),
+                            })
+                          }
+                          className="shrink-0 rounded-xl border border-red-200 px-2 text-xs text-red-600 hover:bg-red-50"
+                          disabled={form.detailParagraphs.length <= 1}
+                        >
+                          حذف
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <span className="text-sm font-medium text-[#4e2e0e]">نکات برجسته (بولت)</span>
+                    <button
+                      type="button"
+                      onClick={() => setForm({ ...form, highlights: [...form.highlights, ""] })}
+                      className="text-xs font-medium text-[#8a5419] hover:underline"
+                    >
+                      + مورد
+                    </button>
+                  </div>
+                  <div className="space-y-2">
+                    {form.highlights.map((item, index) => (
+                      <div key={`h-${index}`} className="flex gap-2">
+                        <input
+                          value={item}
+                          onChange={(e) => {
+                            const next = [...form.highlights];
+                            next[index] = e.target.value;
+                            setForm({ ...form, highlights: next });
+                          }}
+                          className={inputClass}
+                          placeholder="مثلاً مناسب دکوراسیون داخلی"
+                        />
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setForm({
+                              ...form,
+                              highlights: form.highlights.filter((_, i) => i !== index),
+                            })
+                          }
+                          className="shrink-0 rounded-xl border border-red-200 px-2 text-xs text-red-600 hover:bg-red-50"
+                        >
+                          حذف
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <span className="text-sm font-medium text-[#4e2e0e]">جدول مشخصات</span>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setForm({
+                          ...form,
+                          specs: [...form.specs, { label: "", value: "" }],
+                        })
+                      }
+                      className="text-xs font-medium text-[#8a5419] hover:underline"
+                    >
+                      + ردیف
+                    </button>
+                  </div>
+                  <div className="space-y-2">
+                    {form.specs.map((spec, index) => (
+                      <div key={`s-${index}`} className="grid grid-cols-[1fr_1.4fr_auto] gap-2">
+                        <input
+                          value={spec.label}
+                          onChange={(e) => {
+                            const next = [...form.specs];
+                            next[index] = { ...next[index], label: e.target.value };
+                            setForm({ ...form, specs: next });
+                          }}
+                          className={inputClass}
+                          placeholder="عنوان (مثلاً جنس)"
+                        />
+                        <input
+                          value={spec.value}
+                          onChange={(e) => {
+                            const next = [...form.specs];
+                            next[index] = { ...next[index], value: e.target.value };
+                            setForm({ ...form, specs: next });
+                          }}
+                          className={inputClass}
+                          placeholder="مقدار"
+                        />
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setForm({
+                              ...form,
+                              specs: form.specs.filter((_, i) => i !== index),
+                            })
+                          }
+                          className="rounded-xl border border-red-200 px-2 text-xs text-red-600 hover:bg-red-50"
+                        >
+                          حذف
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setForm({
+                        ...form,
+                        specs: DEFAULT_PRODUCT_SPECS.map((s) => ({ ...s })),
+                      })
+                    }
+                    className="mt-2 text-xs text-[#6d4014] hover:underline"
+                  >
+                    بازگردانی قالب پیش‌فرض مشخصات
+                  </button>
+                </div>
               </div>
             </div>
 

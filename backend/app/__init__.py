@@ -1,0 +1,1 @@
+"""Prisma Shop FastAPI backend."""

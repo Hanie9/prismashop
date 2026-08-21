@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { fileToCompressedDataUrl } from "../lib/image-compress";
+import { api } from "../lib/api";
 
 type Props = {
   value: string;
@@ -19,8 +19,8 @@ export default function ImageUploadField({ value, onChange, label = "تصویر 
     setError("");
     setLoading(true);
     try {
-      const dataUrl = await fileToCompressedDataUrl(file);
-      onChange(dataUrl);
+      const uploaded = await api.uploadImage(file);
+      onChange(uploaded.url);
     } catch (err) {
       setError(err instanceof Error ? err.message : "آپلود تصویر ناموفق بود.");
     } finally {
@@ -58,7 +58,7 @@ export default function ImageUploadField({ value, onChange, label = "تصویر 
             onClick={() => inputRef.current?.click()}
             className="w-full rounded-2xl border border-[#ead7bb] bg-[#fffaf5] px-4 py-3 text-sm font-bold text-[#6d4014] transition hover:border-[#d4a96a] disabled:opacity-60 sm:w-auto"
           >
-            {loading ? "در حال آماده‌سازی..." : "انتخاب از دستگاه"}
+            {loading ? "در حال آپلود..." : "انتخاب از دستگاه"}
           </button>
           <p className="text-xs leading-6 text-[#a96c20]">
             می‌توانید عکس را از گالری یا فایل‌های گوشی/کامپیوتر انتخاب کنید. تصویر به‌صورت خودکار فشرده می‌شود.

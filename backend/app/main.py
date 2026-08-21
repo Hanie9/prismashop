@@ -1,0 +1,194 @@
+from contextlib import asynccontextmanager
+from threading import Thread
+import time
+
+from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
+from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
+from starlette.exceptions import HTTPException as StarletteHTTPException
+
+from app.api.routes import (
+    admin,
+    auth,
+    cart,
+    categories,
+    coupons,
+    orders,
+    products,
+    reviews,
+    uploads,
+    wishlist,
+)
+from app.core.config import get_settings
+from app.core.database import Base, SessionLocal, engine
+from app.services.sessions import cleanup_expired_sessions
+from sqlalchemy import text
+
+
+FIELD_LABELS = {
+    "email": "ایمیل",
+    "email_or_mobile": "ایمیل یا موبایل",
+    "password": "رمز عبور",
+    "first_name": "نام",
+    "last_name": "نام خانوادگی",
+    "mobile": "موبایل",
+    "phone": "موبایل",
+    "postal_code": "کد پستی",
+    "address": "آدرس",
+    "province": "استان",
+    "city": "شهر",
+    "code": "کد تخفیف",
+    "name": "نام",
+    "category_id": "دسته‌بندی",
+    "images": "تصاویر",
+    "value": "مقدار",
+    "items": "اقلام سبد",
+}
+
+
+def _fa_validation_message(err: dict) -> str:
+    loc = err.get("loc") or ()
+    field = next(
+        (str(p) for p in reversed(loc) if p not in ("body", "query", "path")),
+        "",
+    )
+    label = FIELD_LABELS.get(field, "مقدار واردشده")
+    msg = str(err.get("msg") or "")
+    lower = msg.lower()
+    err_type = str(err.get("type") or "")
+
+    if "email" in lower or "email" in err_type:
+        return "لطفاً یک ایمیل معتبر وارد کنید."
+    if "missing" in err_type or "required" in lower:
+        return f"{label} الزامی است."
+    if "too_short" in err_type or "at least" in lower:
+        return f"{label} کوتاه‌تر از حد مجاز است."
+    if "too_long" in err_type:
+        return f"{label} بلندتر از حد مجاز است."
+    if any(x in err_type for x in ("int", "float", "number", "gt", "ge", "lt", "le")):
+        return f"{label} باید عدد معتبر باشد."
+    if any("\u0600" <= ch <= "\u06ff" for ch in msg):
+        return msg
+    return "اطلاعات واردشده نامعتبر است. لطفاً دوباره بررسی کنید."
+
+
+def _session_cleaner_loop() -> None:
+    while True:
+        try:
+            with SessionLocal() as db:
+                cleanup_expired_sessions(db)
+        except Exception:
+            pass
+        time.sleep(300)
+
+
+def _ensure_product_content_columns() -> None:
+    """Add product content JSON columns on existing DBs (create_all won't alter)."""
+    stmts = [
+        "ALTER TABLE products ADD COLUMN IF NOT EXISTS detail_paragraphs JSONB DEFAULT '[]'::jsonb",
+        "ALTER TABLE products ADD COLUMN IF NOT EXISTS highlights JSONB DEFAULT '[]'::jsonb",
+        "ALTER TABLE products ADD COLUMN IF NOT EXISTS specs JSONB DEFAULT '[]'::jsonb",
+    ]
+    with engine.begin() as conn:
+        for stmt in stmts:
+            conn.execute(text(stmt))
+
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    settings = get_settings()
+    import app.models  # noqa: F401 — register all SQLAlchemy models
+
+    Base.metadata.create_all(bind=engine)
+    _ensure_product_content_columns()
+    try:
+        from app.services.reviews import sync_all_product_ratings
+
+        with SessionLocal() as db:
+            sync_all_product_ratings(db)
+    except Exception:
+        pass
+    settings.upload_path.mkdir(parents=True, exist_ok=True)
+    cleaner = Thread(target=_session_cleaner_loop, name="session-cleaner", daemon=True)
+    cleaner.start()
+    yield
+
+
+def create_app() -> FastAPI:
+    settings = get_settings()
+    app = FastAPI(
+        title="Prisma Shop API",
+        description="Backend for Prisma Shop (FastAPI + PostgreSQL, session auth)",
+        version="1.1.0",
+        lifespan=lifespan,
+    )
+
+    app.add_middleware(GZipMiddleware, minimum_size=1000)
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.cors_origins_list,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*", settings.SESSION_HEADER_NAME],
+        expose_headers=[settings.SESSION_HEADER_NAME],
+    )
+
+    for router in (
+        auth.router,
+        products.router,
+        categories.router,
+        coupons.router,
+        orders.router,
+        cart.router,
+        wishlist.router,
+        uploads.router,
+        admin.router,
+        reviews.router,
+    ):
+        app.include_router(router, prefix="/api")
+
+    app.mount(
+        "/uploads",
+        StaticFiles(directory=str(settings.upload_path)),
+        name="uploads",
+    )
+
+    @app.exception_handler(RequestValidationError)
+    async def validation_exception_handler(
+        _request: Request, exc: RequestValidationError
+    ):
+        errors = exc.errors()
+        message = (
+            _fa_validation_message(errors[0])
+            if errors
+            else "اطلاعات واردشده نامعتبر است."
+        )
+        return JSONResponse(status_code=422, content={"detail": message})
+
+    @app.exception_handler(StarletteHTTPException)
+    async def http_exception_handler(_request: Request, exc: StarletteHTTPException):
+        detail = exc.detail
+        if isinstance(detail, str) and not any(
+            "\u0600" <= ch <= "\u06ff" for ch in detail
+        ):
+            mapping = {
+                401: "برای ادامه باید وارد حساب کاربری شوید.",
+                403: "دسترسی مجاز نیست.",
+                404: "مورد درخواستی یافت نشد.",
+                405: "این درخواست مجاز نیست.",
+                500: "خطای سرور. لطفاً کمی بعد دوباره تلاش کنید.",
+            }
+            detail = mapping.get(exc.status_code, "خطایی رخ داد. لطفاً دوباره تلاش کنید.")
+        return JSONResponse(status_code=exc.status_code, content={"detail": detail})
+
+    @app.get("/health")
+    def health():
+        return {"status": "ok", "service": "prismashop-api"}
+
+    return app
+
+
+app = create_app()

@@ -2,11 +2,14 @@
 
 import { use, useEffect, useState } from "react";
 import Link from "next/link";
+import BackLink from "../../components/BackLink";
 import ProductCard from "../../components/ProductCard";
+import ProductReviewsPanel from "../../components/ProductReviewsPanel";
 import { useCart } from "../../components/CartProvider";
 import { useShop } from "../../components/ShopProvider";
 import { useWishlist } from "../../components/WishlistProvider";
 import { getProductImages } from "../../lib/product-images";
+import { filledSpecs } from "../../lib/product-content";
 
 export default function ProductDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -14,7 +17,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
   const { getProduct, getActiveProducts, isLowStock } = useShop();
   const { isWishlisted, toggleItem } = useWishlist();
   const products = getActiveProducts();
-  const product = getProduct(Number(id)) ?? products[0];
+  const product = getProduct(Number(id));
   const qtyInCart = getItemQty(product?.id ?? 0);
   const wishlisted = isWishlisted(product?.id ?? 0);
   const stock = product ? getAvailableStock(product.id) : 0;
@@ -26,16 +29,30 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
   const [activeTab, setActiveTab] = useState<"desc" | "specs" | "reviews">("desc");
   const [added, setAdded] = useState(false);
   const [stockMsg, setStockMsg] = useState("");
+  const [reviewCount, setReviewCount] = useState(product?.reviewCount ?? 0);
 
   useEffect(() => {
     setSelectedImg(0);
     setQty(1);
-  }, [id]);
+    setReviewCount(product?.reviewCount ?? 0);
+  }, [id, product?.reviewCount]);
 
   if (!product) {
     return (
-      <div className="flex min-h-[50vh] items-center justify-center text-sm text-[#6d4014]">
-        محصول یافت نشد.
+      <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 bg-[#faf6ee] px-4 text-center">
+        <h1 className="text-xl font-black text-[#2e1a08]">محصول یافت نشد</h1>
+        <p className="max-w-sm text-sm text-[#6d4014]">
+          این محصول وجود ندارد یا دیگر در فروشگاه فعال نیست.
+        </p>
+        <div className="flex flex-wrap items-center justify-center gap-3">
+          <Link
+            href="/products"
+            className="rounded-full bg-[#8a5419] px-6 py-3 text-sm font-bold text-white"
+          >
+            مشاهده همه محصولات
+          </Link>
+          <BackLink href="/">بازگشت به صفحه اصلی</BackLink>
+        </div>
       </div>
     );
   }
@@ -57,6 +74,13 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
             <Link href="/" className="hover:text-[#6d4014] shrink-0">خانه</Link>
             <span className="shrink-0">/</span>
             <Link href="/products" className="hover:text-[#6d4014] shrink-0">محصولات</Link>
+            <span className="shrink-0">/</span>
+            <Link
+              href={`/products?cat=${product.categoryId}`}
+              className="hover:text-[#6d4014] shrink-0"
+            >
+              {product.category}
+            </Link>
             <span className="shrink-0">/</span>
             <span className="text-[#4e2e0e] font-medium truncate">{product.name}</span>
           </div>
@@ -94,19 +118,26 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
 
           {/* Info */}
           <div>
-            <div className="text-xs text-[#a96c20] mb-2 font-medium">{product.category}</div>
+            <Link
+              href={`/products?cat=${product.categoryId}`}
+              className="mb-2 inline-block text-xs font-medium text-[#a96c20] hover:text-[#8a5419] hover:underline"
+            >
+              {product.category}
+            </Link>
             <h1 className="text-xl sm:text-2xl font-black text-[#2e1a08] leading-9 mb-3">{product.name}</h1>
 
             {/* Rating */}
             <div className="flex flex-wrap items-center gap-2 mb-5">
               <div className="flex items-center gap-0.5">
                 {[1, 2, 3, 4, 5].map((s) => (
-                  <svg key={s} width="16" height="16" viewBox="0 0 24 24" fill={s <= product.rating ? "#d4a96a" : "none"} stroke="#d4a96a" strokeWidth={2}>
+                  <svg key={s} width="16" height="16" viewBox="0 0 24 24" fill={s <= Math.round(product.rating) ? "#d4a96a" : "none"} stroke="#d4a96a" strokeWidth={2}>
                     <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
                   </svg>
                 ))}
               </div>
-              <span className="text-sm text-[#a96c20]">({product.reviewCount} نظر)</span>
+              {reviewCount === 0 && (
+                <span className="text-sm text-[#a96c20]">هنوز نظری ثبت نشده</span>
+              )}
               {outOfStock ? (
                 <span className="text-red-600 text-sm font-medium border border-red-200 bg-red-50 px-2 py-0.5 rounded-full">
                   ناموجود
@@ -117,7 +148,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                 </span>
               ) : (
                 <span className="text-green-600 text-sm font-medium border border-green-200 bg-green-50 px-2 py-0.5 rounded-full">
-                  موجود ({stock.toLocaleString("fa-IR")})
+                  موجود
                 </span>
               )}
             </div>
@@ -126,12 +157,14 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
             <div className="flex items-center gap-3 bg-[#fdf8f3] rounded-2xl p-4 mb-6 border border-[#e8cfa8]">
               <div>
                 <div className="text-xl sm:text-2xl font-black text-[#4e2e0e]">
-                  {product.price.toLocaleString("fa-IR")} تومان
+                  {product.price.toLocaleString("fa-IR")}
+                  <span className="ms-[1mm] inline-block text-base font-bold sm:text-lg">تومان</span>
                 </div>
                 {product.originalPrice && (
                   <div className="flex flex-wrap items-center gap-2 mt-1">
                     <span className="text-sm text-gray-400 line-through">
-                      {product.originalPrice.toLocaleString("fa-IR")} تومان
+                      {product.originalPrice.toLocaleString("fa-IR")}
+                      <span className="ms-[1mm] inline-block">تومان</span>
                     </span>
                     <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full font-bold">
                       {discountPct}٪ تخفیف
@@ -167,11 +200,6 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                   +
                 </button>
               </div>
-              {!outOfStock && (
-                <span className="text-xs text-[#a96c20]">
-                  حداکثر قابل افزودن: {remaining.toLocaleString("fa-IR")}
-                </span>
-              )}
             </div>
 
             {/* CTA buttons */}
@@ -235,7 +263,15 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
             {/* Meta */}
             <div className="space-y-2 text-sm text-[#a96c20]">
               <div className="flex flex-wrap gap-2"><span className="font-medium text-[#4e2e0e]">کد محصول:</span> WD-{product.id.toString().padStart(4, "0")}</div>
-              <div className="flex flex-wrap gap-2"><span className="font-medium text-[#4e2e0e]">دسته‌بندی:</span> {product.category}</div>
+              <div className="flex flex-wrap gap-2">
+                <span className="font-medium text-[#4e2e0e]">دسته‌بندی:</span>{" "}
+                <Link
+                  href={`/products?cat=${product.categoryId}`}
+                  className="text-[#8a5419] hover:underline"
+                >
+                  {product.category}
+                </Link>
+              </div>
               <div className="flex flex-wrap gap-2"><span className="font-medium text-[#4e2e0e]">ارسال:</span> ۲ تا ۵ روز کاری</div>
             </div>
           </div>
@@ -247,7 +283,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
             {[
               { id: "desc", label: "توضیحات" },
               { id: "specs", label: "مشخصات" },
-              { id: "reviews", label: `نظرات (${product.reviewCount})` },
+              { id: "reviews", label: `نظرات (${reviewCount})` },
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -266,71 +302,72 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
           <div className="p-5 sm:p-8">
             {activeTab === "desc" && (
               <div className="text-sm text-[#4e2e0e] leading-8 max-w-3xl">
-                <p className="mb-4">
-                  این محصول از چوب درجه یک ایرانی با دقت و مهارت بالا ساخته شده است. سطح محصول کاملاً صاف و آماده رنگ‌آمیزی یا دکوپاژ است.
-                </p>
-                <p className="mb-4">
-                  برای حفظ کیفیت، از لحظه تولید تا تحویل به مشتری، تمام مراحل زیر نظر کارشناسان متخصص ما انجام می‌شود. این محصول بهترین گزینه برای:
-                </p>
-                <ul className="list-none space-y-2 mr-4">
-                  {["هنر دکوپاژ و دکوپاژ روی چوب", "نجاری خانگی و پروژه‌های DIY", "دکوراسیون داخلی منزل و محل کار", "کلاس‌های هنری و کارگاه‌های آموزشی"].map((item) => (
-                    <li key={item} className="flex items-center gap-2">
-                      <span className="w-2 h-2 bg-[#d4a96a] rounded-full shrink-0"></span>
-                      {item}
-                    </li>
-                  ))}
-                </ul>
+                {(product.detailParagraphs?.length
+                  ? product.detailParagraphs
+                  : [
+                      product.description ||
+                        "این محصول از چوب درجه یک ایرانی با دقت و مهارت بالا ساخته شده است. سطح محصول کاملاً صاف و آماده رنگ‌آمیزی یا دکوپاژ است.",
+                    ]
+                ).map((paragraph) => (
+                  <p key={paragraph.slice(0, 48)} className="mb-4">
+                    {paragraph}
+                  </p>
+                ))}
+                {(product.highlights?.length
+                  ? product.highlights
+                  : [
+                      "هنر دکوپاژ و دکوپاژ روی چوب",
+                      "نجاری خانگی و پروژه‌های DIY",
+                      "دکوراسیون داخلی منزل و محل کار",
+                      "کلاس‌های هنری و کارگاه‌های آموزشی",
+                    ]
+                ).length > 0 && (
+                  <ul className="list-none space-y-2 mr-4">
+                    {(product.highlights?.length
+                      ? product.highlights
+                      : [
+                          "هنر دکوپاژ و دکوپاژ روی چوب",
+                          "نجاری خانگی و پروژه‌های DIY",
+                          "دکوراسیون داخلی منزل و محل کار",
+                          "کلاس‌های هنری و کارگاه‌های آموزشی",
+                        ]
+                    ).map((item) => (
+                      <li key={item} className="flex items-center gap-2">
+                        <span className="w-2 h-2 bg-[#d4a96a] rounded-full shrink-0" />
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
             )}
             {activeTab === "specs" && (
               <div className="max-w-2xl overflow-x-auto">
-                <table className="w-full text-sm min-w-[280px]">
-                  <tbody>
-                    {[
-                      ["جنس", "چوب طبیعی (MDF درجه یک)"],
-                      ["ابعاد", "۲۰ × ۱۵ × ۵ سانتی‌متر"],
-                      ["وزن", "۳۵۰ گرم"],
-                      ["رنگ", "رنگ طبیعی چوب"],
-                      ["سطح", "سمباده‌زده و آماده رنگ‌کاری"],
-                      ["کشور تولیدکننده", "ایران"],
-                      ["ضمانت", "۷ روز ضمانت بازگشت"],
-                    ].map(([key, val], i) => (
-                      <tr key={key} className={i % 2 === 0 ? "bg-[#fdf8f3]" : "bg-white"}>
-                        <td className="py-3 px-3 sm:px-4 font-medium text-[#4e2e0e] w-1/3 sm:w-40 border border-[#f5e9d5]">{key}</td>
-                        <td className="py-3 px-3 sm:px-4 text-[#6d4014] border border-[#f5e9d5]">{val}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                {filledSpecs(product.specs).length === 0 ? (
+                  <p className="text-sm text-[#a96c20]">هنوز مشخصاتی برای این محصول ثبت نشده است.</p>
+                ) : (
+                  <table className="w-full text-sm min-w-[280px]">
+                    <tbody>
+                      {filledSpecs(product.specs).map((spec, i) => (
+                        <tr key={`${spec.label}-${i}`} className={i % 2 === 0 ? "bg-[#fdf8f3]" : "bg-white"}>
+                          <td className="py-3 px-3 sm:px-4 font-medium text-[#4e2e0e] w-1/3 sm:w-40 border border-[#f5e9d5]">
+                            {spec.label}
+                          </td>
+                          <td className="py-3 px-3 sm:px-4 text-[#6d4014] border border-[#f5e9d5]">
+                            {spec.value}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
               </div>
             )}
             {activeTab === "reviews" && (
-              <div className="space-y-6 max-w-2xl">
-                {[
-                  { name: "سارا احمدی", rating: 5, date: "۱۵ مرداد ۱۴۰۳", text: "خیلی خوب بود! کیفیت چوب عالیه و دقیقاً همون چیزیه که تو عکس دیدم. ارسال هم سریع بود." },
-                  { name: "رضا کریمی", rating: 4, date: "۸ تیر ۱۴۰۳", text: "محصول خوبیه، فقط بسته‌بندی یکم می‌تونست بهتر باشه. کلاً راضی هستم و دوباره سفارش می‌دم." },
-                ].map((review, i) => (
-                  <div key={i} className="border-b border-[#f5e9d5] pb-6 last:border-0">
-                    <div className="flex items-center justify-between gap-3 mb-2">
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-8 h-8 shrink-0 rounded-full bg-[#6d4014] flex items-center justify-center text-white text-sm font-bold">
-                          {review.name[0]}
-                        </div>
-                        <span className="font-medium text-[#2e1a08] text-sm truncate">{review.name}</span>
-                      </div>
-                      <span className="text-xs text-[#a96c20] shrink-0">{review.date}</span>
-                    </div>
-                    <div className="flex gap-0.5 mb-2 mr-0 sm:mr-11">
-                      {[1, 2, 3, 4, 5].map((s) => (
-                        <svg key={s} width="12" height="12" viewBox="0 0 24 24" fill={s <= review.rating ? "#d4a96a" : "none"} stroke="#d4a96a" strokeWidth={2}>
-                          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-                        </svg>
-                      ))}
-                    </div>
-                    <p className="text-sm text-[#4e2e0e] leading-7 mr-0 sm:mr-11">{review.text}</p>
-                  </div>
-                ))}
-              </div>
+              <ProductReviewsPanel
+                productId={product.id}
+                onReviewCountChange={setReviewCount}
+              />
             )}
           </div>
         </div>

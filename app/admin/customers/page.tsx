@@ -1,162 +1,180 @@
 "use client";
 
-import { useMemo } from "react";
-import { DateTimeBadge, PhoneBadge } from "../../components/AdminMeta";
-import { useShop } from "../../components/ShopProvider";
+import { useEffect, useState } from "react";
+import { DateTimeBadge, EmailBadge, PhoneBadge } from "../../components/AdminMeta";
+import { api } from "../../lib/api";
 
 type CustomerRow = {
-  key: string;
+  phone: string;
   firstName: string;
   lastName: string;
-  phone: string;
-  email?: string;
+  email?: string | null;
   city: string;
   province: string;
+  address?: string | null;
+  postalCode?: string | null;
   ordersCount: number;
   totalSpent: number;
-  lastOrderAt: string;
+  lastOrderAt?: string | null;
+  registeredAt?: string | null;
+  isRegistered: boolean;
 };
 
 function formatMoney(value: number) {
-  return `${value.toLocaleString("fa-IR")} تومان`;
+  return (
+    <>
+      {value.toLocaleString("fa-IR")}
+      <span className="ms-[1mm] inline-block">تومان</span>
+    </>
+  );
 }
 
 export default function AdminCustomersPage() {
-  const { orders } = useShop();
+  const [customers, setCustomers] = useState<CustomerRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  const customers = useMemo(() => {
-    const map = new Map<string, CustomerRow>();
-
-    for (const order of orders) {
-      if (order.status === "cancelled") continue;
-      const key = order.customer.phone.trim();
-      const existing = map.get(key);
-      if (existing) {
-        existing.ordersCount += 1;
-        existing.totalSpent += order.total;
-        if (order.createdAt > existing.lastOrderAt) {
-          existing.lastOrderAt = order.createdAt;
-          existing.firstName = order.customer.firstName;
-          existing.lastName = order.customer.lastName;
-          existing.city = order.customer.city;
-          existing.province = order.customer.province;
-          existing.email = order.customer.email;
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const list = await api.customers();
+        if (!cancelled) setCustomers(list);
+      } catch (err) {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : "بارگذاری مشتریان ناموفق بود.");
         }
-      } else {
-        map.set(key, {
-          key,
-          firstName: order.customer.firstName,
-          lastName: order.customer.lastName,
-          phone: order.customer.phone,
-          email: order.customer.email,
-          city: order.customer.city,
-          province: order.customer.province,
-          ordersCount: 1,
-          totalSpent: order.total,
-          lastOrderAt: order.createdAt,
-        });
+      } finally {
+        if (!cancelled) setLoading(false);
       }
-    }
-
-    return Array.from(map.values()).sort((a, b) => b.lastOrderAt.localeCompare(a.lastOrderAt));
-  }, [orders]);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   return (
     <div className="space-y-5">
       <div>
         <h1 className="text-xl font-black text-[#2e1a08] sm:text-2xl">مشتریان</h1>
         <p className="mt-1 text-sm text-[#6d4014]">
-          اطلاعات مشتریانی که حداقل یک سفارش ثبت کرده‌اند
+          همه کاربران ثبت‌نام‌شده و خریداران مهمان
         </p>
       </div>
 
-      {customers.length === 0 ? (
+      {loading && <p className="text-sm text-[#6d4014]">در حال بارگذاری...</p>}
+      {error && (
+        <p className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {error}
+        </p>
+      )}
+
+      {!loading && !error && customers.length === 0 ? (
         <div className="rounded-3xl border border-[#ead7bb] bg-white py-16 text-center text-sm text-[#a96c20]">
-          هنوز مشتری‌ای از طریق سفارش ثبت نشده است.
+          هنوز مشتری‌ای ثبت نشده است.
         </div>
       ) : (
-        <>
-          <div className="space-y-3 md:hidden">
-            {customers.map((c) => (
-              <div key={c.key} className="rounded-3xl border border-[#ead7bb] bg-white p-4">
-                <p className="font-bold text-[#2e1a08]">
-                  {c.firstName} {c.lastName}
-                </p>
-                <div className="mt-2">
-                  <PhoneBadge phone={c.phone} />
-                </div>
-                {c.email && (
-                  <p dir="ltr" className="mt-2 text-xs text-[#a96c20]">
-                    {c.email}
+        !loading &&
+        !error && (
+          <>
+            <div className="space-y-3 md:hidden">
+              {customers.map((c) => (
+                <div
+                  key={c.phone}
+                  className="rounded-3xl border border-[#ead7bb] bg-white p-4 shadow-sm"
+                >
+                  <div className="mb-2 flex items-start justify-between gap-2">
+                    <div className="min-w-0 space-y-1.5">
+                      <p className="font-bold text-[#2e1a08]">
+                        {c.firstName} {c.lastName}
+                      </p>
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <PhoneBadge phone={c.phone} />
+                        {c.email ? <EmailBadge email={c.email} /> : null}
+                      </div>
+                    </div>
+                    {c.isRegistered ? (
+                      <span className="shrink-0 rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-bold text-emerald-700">
+                        عضو سایت
+                      </span>
+                    ) : (
+                      <span className="shrink-0 rounded-full bg-[#fff6ea] px-2.5 py-1 text-[11px] font-bold text-[#a96c20]">
+                        مهمان
+                      </span>
+                    )}
+                  </div>
+                  <p className="mb-2 text-xs text-[#a96c20]">
+                    {[c.province, c.city].filter(Boolean).join(" / ") || "—"}
                   </p>
-                )}
-                <p className="mt-2 text-xs text-[#a96c20]">
-                  {c.province} / {c.city}
-                </p>
-                <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
-                  <div className="rounded-xl bg-[#fffaf5] px-3 py-2">
-                    <p className="text-[#a96c20]">سفارش‌ها</p>
-                    <p className="mt-1 font-bold text-[#2e1a08]">
-                      {c.ordersCount.toLocaleString("fa-IR")}
-                    </p>
+                  {c.address && (
+                    <p className="mb-2 line-clamp-2 text-xs text-[#6d4014]">{c.address}</p>
+                  )}
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-[#4e2e0e]">
+                    <span>{c.ordersCount.toLocaleString("fa-IR")} سفارش</span>
+                    <span className="font-bold">{formatMoney(c.totalSpent)}</span>
                   </div>
-                  <div className="rounded-xl bg-[#fffaf5] px-3 py-2">
-                    <p className="text-[#a96c20]">مجموع خرید</p>
-                    <p className="mt-1 font-bold text-[#4e2e0e]">{formatMoney(c.totalSpent)}</p>
-                  </div>
+                  {(c.lastOrderAt || c.registeredAt) && (
+                    <div className="mt-2">
+                      <DateTimeBadge value={c.lastOrderAt || c.registeredAt || ""} />
+                    </div>
+                  )}
                 </div>
-                <div className="mt-3">
-                  <p className="mb-1.5 text-[11px] text-[#a96c20]">آخرین سفارش</p>
-                  <DateTimeBadge value={c.lastOrderAt} />
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
 
-          <div className="hidden overflow-x-auto rounded-3xl border border-[#ead7bb] bg-white md:block">
-            <table className="min-w-full text-sm">
-              <thead className="bg-[#fffaf5] text-[#6d4014]">
-                <tr>
-                  <th className="px-4 py-3 text-right font-medium">نام</th>
-                  <th className="px-4 py-3 text-right font-medium">تماس</th>
-                  <th className="px-4 py-3 text-right font-medium">شهر</th>
-                  <th className="px-4 py-3 text-right font-medium">تعداد سفارش</th>
-                  <th className="px-4 py-3 text-right font-medium">مجموع خرید</th>
-                  <th className="px-4 py-3 text-right font-medium">آخرین سفارش</th>
-                </tr>
-              </thead>
-              <tbody>
-                {customers.map((c) => (
-                  <tr key={c.key} className="border-t border-[#f1e3cf]">
-                    <td className="px-4 py-3 align-middle font-bold text-[#2e1a08]">
-                      {c.firstName} {c.lastName}
-                    </td>
-                    <td className="px-4 py-3 align-middle">
-                      <PhoneBadge phone={c.phone} />
-                      {c.email && (
-                        <p dir="ltr" className="mt-1.5 text-[11px] text-[#a96c20]">
-                          {c.email}
-                        </p>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 align-middle text-[#6d4014]">
-                      {c.province} / {c.city}
-                    </td>
-                    <td className="px-4 py-3 align-middle font-bold">
-                      {c.ordersCount.toLocaleString("fa-IR")}
-                    </td>
-                    <td className="px-4 py-3 align-middle whitespace-nowrap font-bold text-[#4e2e0e]">
-                      {formatMoney(c.totalSpent)}
-                    </td>
-                    <td className="px-4 py-3 align-middle">
-                      <DateTimeBadge value={c.lastOrderAt} />
-                    </td>
+            <div className="hidden overflow-hidden rounded-3xl border border-[#ead7bb] bg-white md:block">
+              <table className="w-full text-sm">
+                <thead className="bg-[#fffaf5] text-[#6d4014]">
+                  <tr>
+                    <th className="px-4 py-3 text-right font-bold">مشتری</th>
+                    <th className="px-4 py-3 text-right font-bold">تماس</th>
+                    <th className="px-4 py-3 text-right font-bold">شهر</th>
+                    <th className="px-4 py-3 text-right font-bold">سفارش</th>
+                    <th className="px-4 py-3 text-right font-bold">مجموع خرید</th>
+                    <th className="px-4 py-3 text-right font-bold">وضعیت</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </>
+                </thead>
+                <tbody>
+                  {customers.map((c) => (
+                    <tr key={c.phone} className="border-t border-[#f1e3cf]">
+                      <td className="px-4 py-3">
+                        <p className="font-bold text-[#2e1a08]">
+                          {c.firstName} {c.lastName}
+                        </p>
+                        {c.email ? (
+                          <div className="mt-1.5">
+                            <EmailBadge email={c.email} />
+                          </div>
+                        ) : null}
+                      </td>
+                      <td className="px-4 py-3">
+                        <PhoneBadge phone={c.phone} />
+                      </td>
+                      <td className="px-4 py-3 text-[#4e2e0e]">
+                        {[c.province, c.city].filter(Boolean).join(" / ") || "—"}
+                      </td>
+                      <td className="px-4 py-3">{c.ordersCount.toLocaleString("fa-IR")}</td>
+                      <td className="px-4 py-3 font-bold text-[#2e1a08]">
+                        {formatMoney(c.totalSpent)}
+                      </td>
+                      <td className="px-4 py-3">
+                        {c.isRegistered ? (
+                          <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-bold text-emerald-700">
+                            عضو سایت
+                          </span>
+                        ) : (
+                          <span className="rounded-full bg-[#fff6ea] px-2.5 py-1 text-[11px] font-bold text-[#a96c20]">
+                            مهمان
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )
       )}
     </div>
   );

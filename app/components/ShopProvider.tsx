@@ -9,25 +9,16 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { SEED_CATEGORIES, SEED_COUPONS, SEED_PRODUCTS } from "../lib/shop-seed";
+import { api } from "../lib/api";
 import { normalizeProduct } from "../lib/product-images";
-import type {
-  Category,
-  Coupon,
-  Order,
-  Product,
-  ShopData,
-} from "../lib/shop-types";
+import type { Category, Coupon, Order, Product } from "../lib/shop-types";
+import { useAuth } from "./SessionProvider";
 
 export {
-  ADMIN_CREDENTIALS,
-  ADMIN_SESSION_KEY,
   clearAdminSession,
   getAdminSession,
   setAdminSession,
 } from "../lib/admin-auth";
-
-const STORAGE_KEY = "prismashop-shop-data";
 
 type ShopContextValue = {
   products: Product[];
@@ -35,19 +26,22 @@ type ShopContextValue = {
   coupons: Coupon[];
   orders: Order[];
   hydrated: boolean;
+  loadError: string | null;
+  refreshShop: () => Promise<void>;
   getProduct: (id: number) => Product | undefined;
   getActiveProducts: () => Product[];
-  addProduct: (product: Omit<Product, "id"> & { id?: number }) => Product;
-  updateProduct: (id: number, patch: Partial<Product>) => void;
-  deleteProduct: (id: number) => void;
-  addCategory: (category: Category) => void;
-  updateCategory: (id: string, patch: Partial<Category>) => void;
-  deleteCategory: (id: string) => void;
-  addCoupon: (coupon: Coupon) => void;
-  updateCoupon: (id: string, patch: Partial<Coupon>) => void;
-  deleteCoupon: (id: string) => void;
+  addProduct: (product: Omit<Product, "id"> & { id?: number }) => Promise<Product>;
+  updateProduct: (id: number, patch: Partial<Product>) => Promise<void>;
+  deleteProduct: (id: number) => Promise<void>;
+  addCategory: (category: Category) => Promise<void>;
+  updateCategory: (id: string, patch: Partial<Category>) => Promise<void>;
+  deleteCategory: (id: string) => Promise<void>;
+  addCoupon: (coupon: Coupon) => Promise<void>;
+  updateCoupon: (id: string, patch: Partial<Coupon>) => Promise<void>;
+  deleteCoupon: (id: string) => Promise<void>;
   addOrder: (order: Order) => void;
-  updateOrderStatus: (id: string, status: Order["status"]) => void;
+  placeOrder: (payload: Record<string, unknown>) => Promise<Order>;
+  updateOrderStatus: (id: string, status: Order["status"]) => Promise<void>;
   decreaseStock: (items: { id: number; qty: number }[]) => void;
   getStock: (id: number) => number;
   isLowStock: (product: Product) => boolean;
@@ -56,194 +50,303 @@ type ShopContextValue = {
 
 const ShopContext = createContext<ShopContextValue | null>(null);
 
-function createSeedData(): ShopData {
-  return {
-    products: SEED_PRODUCTS.map((p) => normalizeProduct({ ...p })),
-    categories: SEED_CATEGORIES.map((c) => ({ ...c })),
-    coupons: SEED_COUPONS.map((c) => ({ ...c })),
-    orders: [],
-  };
-}
-
-function isShopData(value: unknown): value is ShopData {
-  if (!value || typeof value !== "object") return false;
-  const data = value as Record<string, unknown>;
-  return (
-    Array.isArray(data.products) &&
-    Array.isArray(data.categories) &&
-    Array.isArray(data.coupons) &&
-    Array.isArray(data.orders)
-  );
+function mapProduct(p: Product): Product {
+  return normalizeProduct({
+    ...p,
+    images: p.images?.length ? p.images : p.image ? [p.image] : [],
+  });
 }
 
 export function ShopProvider({ children }: { children: ReactNode }) {
-  const [data, setData] = useState<ShopData>(createSeedData);
+  const { ready, isAdmin, session } = useAuth();
+  const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [coupons, setCoupons] = useState<Coupon[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
   const [hydrated, setHydrated] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
-  useEffect(() => {
-    try {
-      const raw = window.localStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw) as unknown;
-        if (isShopData(parsed)) {
-          setData({
-            products: parsed.products.map((p) => normalizeProduct(p as Product)),
-            categories: parsed.categories,
-            coupons: parsed.coupons,
-            orders: parsed.orders,
-          });
-        } else {
-          setData(createSeedData());
-        }
-      } else {
-        setData(createSeedData());
-      }
-    } catch {
-      setData(createSeedData());
+  const refreshShop = useCallback(async () => {
+    const [cats, prodRes] = await Promise.all([
+      api.listCategories(),
+      api.listProducts({
+        active_only: isAdmin ? false : true,
+        limit: 200,
+      }),
+    ]);
+    setCategories(
+      cats.map((c) => ({
+        id: c.id,
+        name: c.name,
+        icon: c.icon,
+        image: c.image,
+      })),
+    );
+    setProducts(prodRes.items.map(mapProduct));
+
+    if (isAdmin) {
+      const [couponList, orderList] = await Promise.all([
+        api.listCoupons(),
+        api.listOrders(),
+      ]);
+      setCoupons(
+        couponList.map((c) => ({
+          id: c.id,
+          code: c.code,
+          type: c.type,
+          value: c.value,
+          active: c.active,
+          minOrder: (c as Coupon).minOrder ?? 0,
+        })),
+      );
+      setOrders(orderList);
+    } else {
+      setCoupons([]);
+      setOrders([]);
     }
-    setHydrated(true);
-  }, []);
+    setLoadError(null);
+  }, [isAdmin]);
 
   useEffect(() => {
-    if (!hydrated) return;
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-  }, [data, hydrated]);
+    if (!ready) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        await refreshShop();
+      } catch (err) {
+        if (!cancelled) {
+          setLoadError(
+            err instanceof Error
+              ? err.message
+              : "ارتباط با سرور برقرار نشد. لطفاً دوباره تلاش کنید.",
+          );
+          setProducts([]);
+          setCategories([]);
+        }
+      } finally {
+        if (!cancelled) setHydrated(true);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [ready, refreshShop, session?.sessionId, session?.role]);
 
   const getProduct = useCallback(
-    (id: number) => data.products.find((p) => p.id === id),
-    [data.products],
+    (id: number) => products.find((p) => p.id === id),
+    [products],
   );
 
   const getActiveProducts = useCallback(
-    () => data.products.filter((p) => p.active),
-    [data.products],
+    () => products.filter((p) => p.active),
+    [products],
   );
 
   const nextProductId = useCallback(() => {
-    if (data.products.length === 0) return 1;
-    return Math.max(...data.products.map((p) => p.id)) + 1;
-  }, [data.products]);
+    if (products.length === 0) return 1;
+    return Math.max(...products.map((p) => p.id)) + 1;
+  }, [products]);
 
   const addProduct = useCallback(
-    (product: Omit<Product, "id"> & { id?: number }): Product => {
-      let created!: Product;
-      setData((prev) => {
-        const id =
-          product.id ??
-          (prev.products.length === 0
-            ? 1
-            : Math.max(...prev.products.map((p) => p.id)) + 1);
-        created = normalizeProduct({ ...product, id });
-        return {
-          ...prev,
-          products: [...prev.products, created],
-        };
+    async (product: Omit<Product, "id"> & { id?: number }) => {
+      const created = await api.createProduct({
+        name: product.name,
+        categoryId: product.categoryId,
+        originalPrice: product.originalPrice ?? product.price,
+        discountPercent: product.discount ?? 0,
+        images: product.images?.length ? product.images : [product.image],
+        isNew: product.isNew ?? false,
+        stock: product.stock,
+        lowStockThreshold: product.lowStockThreshold,
+        description: product.description,
+        detailParagraphs: product.detailParagraphs ?? [],
+        highlights: product.highlights ?? [],
+        specs: product.specs ?? [],
+        active: product.active,
       });
-      return created;
+      const mapped = mapProduct(created);
+      setProducts((prev) => [...prev, mapped]);
+      return mapped;
     },
     [],
   );
 
-  const updateProduct = useCallback((id: number, patch: Partial<Product>) => {
-    setData((prev) => ({
+  const updateProduct = useCallback(async (id: number, patch: Partial<Product>) => {
+    const body: Record<string, unknown> = {};
+    if (patch.name !== undefined) body.name = patch.name;
+    if (patch.categoryId !== undefined) body.categoryId = patch.categoryId;
+    if (patch.originalPrice !== undefined) body.originalPrice = patch.originalPrice;
+    if (patch.discount !== undefined) body.discountPercent = patch.discount;
+    if (patch.images !== undefined) body.images = patch.images;
+    if (patch.isNew !== undefined) body.isNew = patch.isNew;
+    if (patch.stock !== undefined) body.stock = patch.stock;
+    if (patch.lowStockThreshold !== undefined)
+      body.lowStockThreshold = patch.lowStockThreshold;
+    if (patch.description !== undefined) body.description = patch.description;
+    if (patch.detailParagraphs !== undefined) body.detailParagraphs = patch.detailParagraphs;
+    if (patch.highlights !== undefined) body.highlights = patch.highlights;
+    if (patch.specs !== undefined) body.specs = patch.specs;
+    if (patch.active !== undefined) body.active = patch.active;
+
+    // Prefer dedicated stock endpoint when only stock fields change
+    if (
+      (patch.stock !== undefined || patch.lowStockThreshold !== undefined) &&
+      Object.keys(body).every((k) => k === "stock" || k === "lowStockThreshold")
+    ) {
+      const updated = await api.updateStock(id, {
+        stock: patch.stock,
+        lowStockThreshold: patch.lowStockThreshold,
+      });
+      setProducts((prev) =>
+        prev.map((p) => (p.id === id ? mapProduct(updated) : p)),
+      );
+      return;
+    }
+
+    const updated = await api.updateProduct(id, body);
+    setProducts((prev) =>
+      prev.map((p) => (p.id === id ? mapProduct(updated) : p)),
+    );
+  }, []);
+
+  const deleteProduct = useCallback(async (id: number) => {
+    await api.deleteProduct(id);
+    setProducts((prev) => prev.filter((p) => p.id !== id));
+  }, []);
+
+  const addCategory = useCallback(async (category: Category) => {
+    const created = await api.createCategory({
+      id: category.id,
+      name: category.name,
+      icon: category.icon,
+      image: category.image,
+    });
+    setCategories((prev) => [
       ...prev,
-      products: prev.products.map((p) =>
-        p.id === id ? normalizeProduct({ ...p, ...patch, id }) : p,
+      {
+        id: created.id,
+        name: created.name,
+        icon: created.icon,
+        image: created.image,
+      },
+    ]);
+  }, []);
+
+  const updateCategory = useCallback(async (id: string, patch: Partial<Category>) => {
+    const updated = await api.updateCategory(id, patch);
+    setCategories((prev) =>
+      prev.map((c) =>
+        c.id === id
+          ? {
+              id: updated.id,
+              name: updated.name,
+              icon: updated.icon,
+              image: updated.image,
+            }
+          : c,
       ),
-    }));
+    );
+    if (patch.name) {
+      setProducts((prev) =>
+        prev.map((p) =>
+          p.categoryId === id ? { ...p, category: patch.name as string } : p,
+        ),
+      );
+    }
   }, []);
 
-  const deleteProduct = useCallback((id: number) => {
-    setData((prev) => ({
-      ...prev,
-      products: prev.products.filter((p) => p.id !== id),
-    }));
+  const deleteCategory = useCallback(async (id: string) => {
+    await api.deleteCategory(id);
+    setCategories((prev) => prev.filter((c) => c.id !== id));
   }, []);
 
-  const addCategory = useCallback((category: Category) => {
-    setData((prev) => ({
+  const addCoupon = useCallback(async (coupon: Coupon) => {
+    const created = await api.createCoupon({
+      code: coupon.code,
+      type: coupon.type,
+      value: coupon.value,
+      active: coupon.active,
+      minOrder: coupon.minOrder,
+    });
+    setCoupons((prev) => [
       ...prev,
-      categories: [...prev.categories, category],
-    }));
+      {
+        id: created.id,
+        code: created.code,
+        type: created.type,
+        value: created.value,
+        active: created.active,
+        minOrder: (created as Coupon).minOrder ?? coupon.minOrder,
+      },
+    ]);
   }, []);
 
-  const updateCategory = useCallback((id: string, patch: Partial<Category>) => {
-    setData((prev) => ({
-      ...prev,
-      categories: prev.categories.map((c) => (c.id === id ? { ...c, ...patch, id } : c)),
-    }));
+  const updateCoupon = useCallback(async (id: string, patch: Partial<Coupon>) => {
+    const updated = await api.updateCoupon(id, patch);
+    setCoupons((prev) =>
+      prev.map((c) =>
+        c.id === id
+          ? {
+              id: updated.id,
+              code: updated.code,
+              type: updated.type,
+              value: updated.value,
+              active: updated.active,
+              minOrder: (updated as Coupon).minOrder ?? c.minOrder,
+            }
+          : c,
+      ),
+    );
   }, []);
 
-  const deleteCategory = useCallback((id: string) => {
-    setData((prev) => ({
-      ...prev,
-      categories: prev.categories.filter((c) => c.id !== id),
-    }));
-  }, []);
-
-  const addCoupon = useCallback((coupon: Coupon) => {
-    setData((prev) => ({
-      ...prev,
-      coupons: [...prev.coupons, coupon],
-    }));
-  }, []);
-
-  const updateCoupon = useCallback((id: string, patch: Partial<Coupon>) => {
-    setData((prev) => ({
-      ...prev,
-      coupons: prev.coupons.map((c) => (c.id === id ? { ...c, ...patch, id } : c)),
-    }));
-  }, []);
-
-  const deleteCoupon = useCallback((id: string) => {
-    setData((prev) => ({
-      ...prev,
-      coupons: prev.coupons.filter((c) => c.id !== id),
-    }));
+  const deleteCoupon = useCallback(async (id: string) => {
+    await api.deleteCoupon(id);
+    setCoupons((prev) => prev.filter((c) => c.id !== id));
   }, []);
 
   const addOrder = useCallback((order: Order) => {
-    setData((prev) => ({
-      ...prev,
-      orders: [order, ...prev.orders],
-    }));
+    setOrders((prev) => [order, ...prev]);
   }, []);
 
-  const updateOrderStatus = useCallback((id: string, status: Order["status"]) => {
-    setData((prev) => ({
-      ...prev,
-      orders: prev.orders.map((o) => (o.id === id ? { ...o, status } : o)),
-    }));
-  }, []);
+  const placeOrder = useCallback(async (payload: Record<string, unknown>) => {
+    const order = await api.placeOrder(payload);
+    setOrders((prev) => [order, ...prev]);
+    await refreshShop();
+    return order;
+  }, [refreshShop]);
 
-  const decreaseStock = useCallback((items: { id: number; qty: number }[]) => {
-    setData((prev) => ({
-      ...prev,
-      products: prev.products.map((p) => {
-        const match = items.find((item) => item.id === p.id);
-        if (!match) return p;
-        return { ...p, stock: Math.max(0, p.stock - match.qty) };
-      }),
-    }));
+  const updateOrderStatus = useCallback(
+    async (id: string, status: Order["status"]) => {
+      const updated = await api.updateOrderStatus(id, status);
+      setOrders((prev) => prev.map((o) => (o.id === id ? updated : o)));
+    },
+    [],
+  );
+
+  const decreaseStock = useCallback((_items: { id: number; qty: number }[]) => {
+    // Stock is decremented server-side on checkout
   }, []);
 
   const getStock = useCallback(
-    (id: number) => data.products.find((p) => p.id === id)?.stock ?? 0,
-    [data.products],
+    (id: number) => products.find((p) => p.id === id)?.stock ?? 0,
+    [products],
   );
 
   const isLowStock = useCallback(
-    (product: Product) => product.stock > 0 && product.stock <= product.lowStockThreshold,
+    (product: Product) =>
+      product.stock > 0 && product.stock <= product.lowStockThreshold,
     [],
   );
 
   const value = useMemo(
     () => ({
-      products: data.products,
-      categories: data.categories,
-      coupons: data.coupons,
-      orders: data.orders,
+      products,
+      categories,
+      coupons,
+      orders,
       hydrated,
+      loadError,
+      refreshShop,
       getProduct,
       getActiveProducts,
       addProduct,
@@ -256,6 +359,7 @@ export function ShopProvider({ children }: { children: ReactNode }) {
       updateCoupon,
       deleteCoupon,
       addOrder,
+      placeOrder,
       updateOrderStatus,
       decreaseStock,
       getStock,
@@ -263,11 +367,13 @@ export function ShopProvider({ children }: { children: ReactNode }) {
       nextProductId,
     }),
     [
-      data.products,
-      data.categories,
-      data.coupons,
-      data.orders,
+      products,
+      categories,
+      coupons,
+      orders,
       hydrated,
+      loadError,
+      refreshShop,
       getProduct,
       getActiveProducts,
       addProduct,
@@ -280,6 +386,7 @@ export function ShopProvider({ children }: { children: ReactNode }) {
       updateCoupon,
       deleteCoupon,
       addOrder,
+      placeOrder,
       updateOrderStatus,
       decreaseStock,
       getStock,

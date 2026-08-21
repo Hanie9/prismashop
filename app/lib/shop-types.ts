@@ -1,3 +1,8 @@
+export type ProductSpec = {
+  label: string;
+  value: string;
+};
+
 export type Product = {
   id: number;
   name: string;
@@ -15,7 +20,14 @@ export type Product = {
   discount?: number;
   stock: number;
   lowStockThreshold: number;
+  /** خلاصه کوتاه زیر عنوان محصول */
   description?: string;
+  /** پاراگراف‌های تب توضیحات */
+  detailParagraphs?: string[];
+  /** موارد بولت‌دار تب توضیحات */
+  highlights?: string[];
+  /** ردیف‌های جدول مشخصات */
+  specs?: ProductSpec[];
   active: boolean;
 };
 

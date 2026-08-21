@@ -4,16 +4,14 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useEffect, useState } from "react";
-import {
-  isAdminCredentials,
-  setAdminSession,
-} from "../../lib/admin-auth";
-
-const USERS_STORAGE_KEY = "prismashop-users";
-const SESSION_STORAGE_KEY = "prismashop-session";
+import { api, getRememberedLogin, setRememberedLogin, setSessionPersist, setStoredSessionId } from "../../lib/api";
+import { useAuth } from "../../components/SessionProvider";
+import { setAdminSession } from "../../lib/admin-auth";
+import { isValidEmailOrMobile } from "../../lib/validation";
 
 export default function LoginPage() {
   const router = useRouter();
+  const { refresh } = useAuth();
   const [showPass, setShowPass] = useState(false);
   const [form, setForm] = useState({
     email: "",
@@ -23,17 +21,35 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [justRegistered, setJustRegistered] = useState(false);
+  const [cancelHref, setCancelHref] = useState("/");
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const email = params.get("email") ?? "";
+    const emailFromQuery = params.get("email") ?? "";
     const registered = params.get("registered") === "1";
+    const remembered = getRememberedLogin();
+    const next = params.get("next");
 
-    setForm((current) => ({ ...current, email }));
+    // "بازگشت" must cancel login — never go to `next` (that can require auth and loop).
+    if (next === "/checkout" || next?.startsWith("/checkout?")) {
+      setCancelHref("/cart");
+    } else if (next?.startsWith("/admin")) {
+      setCancelHref("/");
+    } else if (next?.startsWith("/account")) {
+      setCancelHref("/");
+    } else {
+      setCancelHref("/");
+    }
+
+    setForm((current) => ({
+      ...current,
+      email: emailFromQuery || remembered || current.email,
+      remember: Boolean(remembered) && !emailFromQuery,
+    }));
     setJustRegistered(registered);
   }, []);
 
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError("");
 
@@ -42,47 +58,39 @@ export default function LoginPage() {
       return;
     }
 
-    // Admin credentials on storefront login → open admin panel
-    if (isAdminCredentials(form.email, form.password)) {
-      setAdminSession();
-      router.replace("/admin");
+    if (!isValidEmailOrMobile(form.email)) {
+      setError("ایمیل یا شماره موبایل معتبر وارد کنید (مثال: 09123456789).");
       return;
     }
 
+    setIsSubmitting(true);
     try {
-      setIsSubmitting(true);
-      const rawUsers = window.localStorage.getItem(USERS_STORAGE_KEY);
-      const users = rawUsers ? JSON.parse(rawUsers) : [];
-
-      const matchedUser = users.find(
-        (user: { email: string; mobile: string; password: string; firstName?: string; lastName?: string }) =>
-          (user.email === form.email.trim().toLowerCase() || user.mobile === form.email.trim()) &&
-          user.password === form.password
-      );
-
-      if (!matchedUser) {
-        setError(
-          "اطلاعات ورود صحیح نیست. اگر ادمین هستید از /admin/login وارد شوید یا ابتدا ثبت‌نام کنید.",
-        );
-        setIsSubmitting(false);
-        return;
+      const identifier = form.email.trim();
+      setSessionPersist(form.remember);
+      const session = await api.login(identifier, form.password, form.remember);
+      setStoredSessionId(session.sessionId);
+      if (form.remember) setRememberedLogin(identifier);
+      else setRememberedLogin(null);
+      if (session.role === "admin") {
+        setAdminSession();
       }
-
-      window.localStorage.setItem(
-        SESSION_STORAGE_KEY,
-        JSON.stringify({
-          email: matchedUser.email,
-          fullName: `${matchedUser.firstName ?? ""} ${matchedUser.lastName ?? ""}`.trim(),
-          remember: form.remember,
-          loggedInAt: new Date().toISOString(),
-        })
-      );
+      await refresh();
       window.dispatchEvent(new Event("prismashop-auth-change"));
 
-      router.push("/");
+      const next = new URLSearchParams(window.location.search).get("next");
+      if (session.role === "admin") {
+        router.replace(next?.startsWith("/admin") ? next : "/admin");
+      } else {
+        router.push(next && next.startsWith("/") ? next : "/");
+      }
       router.refresh();
-    } catch {
-      setError("ورود انجام نشد. لطفاً دوباره تلاش کنید.");
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "ورود انجام نشد. لطفاً دوباره تلاش کنید.",
+      );
+    } finally {
       setIsSubmitting(false);
     }
   };
@@ -114,9 +122,12 @@ export default function LoginPage() {
             </div>
           </Link>
 
-          <div className="hidden rounded-full border border-white/15 bg-white/10 px-4 py-2 text-xs text-[#f1d5ad] backdrop-blur-md md:block">
-            هنر کالیگرافی روی چوب
-          </div>
+          <Link
+            href={cancelHref}
+            className="rounded-full border border-white/15 bg-white/10 px-4 py-2 text-xs text-[#f1d5ad] backdrop-blur-md transition-colors hover:bg-white/15 hover:text-white"
+          >
+            بازگشت
+          </Link>
         </div>
 
         <div className="mx-auto flex w-full max-w-6xl flex-1 items-center py-4 lg:py-0">
@@ -212,7 +223,7 @@ export default function LoginPage() {
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between">
+                <div className="flex items-center">
                   <label className="flex cursor-pointer items-center gap-2">
                     <input
                       type="checkbox"
@@ -222,9 +233,6 @@ export default function LoginPage() {
                     />
                     <span className="text-sm text-[#f7ead3]">مرا به خاطر بسپار</span>
                   </label>
-                  <Link href="/auth/forgot" className="text-sm font-medium text-[#f0d3aa] hover:text-white">
-                    فراموشی رمز؟
-                  </Link>
                 </div>
 
                 <button
@@ -234,12 +242,6 @@ export default function LoginPage() {
                 >
                   {isSubmitting ? "در حال ورود..." : "ورود به حساب"}
                 </button>
-                <p className="text-center text-xs leading-6 text-[#f0d3aa]/90">
-                  مدیر فروشگاه هستید؟{" "}
-                  <Link href="/admin/login" className="font-bold text-white underline">
-                    ورود به پنل ادمین
-                  </Link>
-                </p>
                 {error && (
                   <div className="rounded-2xl border border-red-300/50 bg-red-500/10 px-4 py-3 text-sm text-red-100">
                     {error}

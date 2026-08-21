@@ -9,7 +9,7 @@ import type { Category } from "../../lib/shop-types";
 const empty = { id: "", name: "", icon: "🪵", image: "" };
 
 export default function AdminCategoriesPage() {
-  const { categories, products, addCategory, updateCategory, deleteCategory, updateProduct } =
+  const { categories, products, addCategory, updateCategory, deleteCategory } =
     useShop();
   const [form, setForm] = useState(empty);
   const [editing, setEditing] = useState(false);
@@ -30,7 +30,7 @@ export default function AdminCategoriesPage() {
     setOpen(true);
   };
 
-  const onSubmit = (e: FormEvent) => {
+  const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError("");
     const id = form.id.trim().toLowerCase().replace(/\s+/g, "-");
@@ -43,29 +43,29 @@ export default function AdminCategoriesPage() {
       return;
     }
 
-    if (editing) {
-      const name = form.name.trim();
-      updateCategory(form.id, {
-        name,
-        icon: form.icon.trim() || "📦",
-        image: form.image.trim(),
-      });
-      products
-        .filter((p) => p.categoryId === form.id)
-        .forEach((p) => updateProduct(p.id, { category: name }));
-    } else {
-      if (categories.some((c) => c.id === id)) {
-        setError("این شناسه دسته‌بندی از قبل وجود دارد.");
-        return;
+    try {
+      if (editing) {
+        await updateCategory(form.id, {
+          name: form.name.trim(),
+          icon: form.icon.trim() || "📦",
+          image: form.image.trim(),
+        });
+      } else {
+        if (categories.some((c) => c.id === id)) {
+          setError("این شناسه دسته‌بندی از قبل وجود دارد.");
+          return;
+        }
+        await addCategory({
+          id,
+          name: form.name.trim(),
+          icon: form.icon.trim() || "📦",
+          image: form.image.trim(),
+        });
       }
-      addCategory({
-        id,
-        name: form.name.trim(),
-        icon: form.icon.trim() || "📦",
-        image: form.image.trim(),
-      });
+      setOpen(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "ذخیره ناموفق بود.");
     }
-    setOpen(false);
   };
 
   return (

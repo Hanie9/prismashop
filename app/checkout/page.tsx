@@ -1,15 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useAuth } from "../components/SessionProvider";
 import { useCart } from "../components/CartProvider";
+import PriceText from "../components/PriceText";
+import SearchableSelect from "../components/SearchableSelect";
 import { useShop } from "../components/ShopProvider";
-import {
-  calcCouponDiscount,
-  COUPON_STORAGE_KEY,
-  findCoupon,
-} from "../lib/coupons";
-import type { Order } from "../lib/shop-types";
+import { api } from "../lib/api";
+import { getCitiesForProvince, IRAN_PROVINCE_NAMES } from "../lib/iran-locations";
+import { isValidIranMobile } from "../lib/validation";
 
 type CheckoutForm = {
   firstName: string;
@@ -33,28 +34,67 @@ const initialForm: CheckoutForm = {
   notes: "",
 };
 
-function createTrackingCode() {
-  const random = Math.floor(100000 + Math.random() * 900000);
-  return `PRS-${random.toString()}`;
-}
-
 export default function CheckoutPage() {
+  const router = useRouter();
+  const { ready, isLoggedIn, customer, admin, refresh } = useAuth();
   const { items, clearCart, getAvailableStock } = useCart();
-  const { getProduct, addOrder, decreaseStock, coupons } = useShop();
-  const [form, setForm] = useState<CheckoutForm>(initialForm);
+  const { getProduct, placeOrder, refreshShop } = useShop();
+  const [form, setForm] = useState(initialForm);
   const [errors, setErrors] = useState<Partial<Record<keyof CheckoutForm, string>>>({});
   const [trackingCode, setTrackingCode] = useState("");
   const [submittedName, setSubmittedName] = useState("");
   const [copyMessage, setCopyMessage] = useState("");
   const [stockError, setStockError] = useState("");
-  const [couponCode, setCouponCode] = useState("");
+  const [couponDraft, setCouponDraft] = useState("");
+  const [appliedCode, setAppliedCode] = useState("");
+  const [discount, setDiscount] = useState(0);
+  const [couponMessage, setCouponMessage] = useState("");
+  const [couponError, setCouponError] = useState("");
+  const [applyingCoupon, setApplyingCoupon] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [openSelect, setOpenSelect] = useState<string | null>(null);
+  const profileFilled = useRef(false);
 
   useEffect(() => {
-    try {
-      const saved = window.sessionStorage.getItem(COUPON_STORAGE_KEY);
-      if (saved) setCouponCode(saved);
-    } catch {}
-  }, []);
+    if (!ready) return;
+    if (!isLoggedIn) {
+      router.replace(`/auth/login?next=${encodeURIComponent("/checkout")}`);
+    }
+  }, [ready, isLoggedIn, router]);
+
+  useEffect(() => {
+    if (profileFilled.current) return;
+    if (customer) {
+      profileFilled.current = true;
+      setForm((f) => ({
+        ...f,
+        firstName: customer.firstName || "",
+        lastName: customer.lastName || "",
+        phone: customer.mobile || "",
+        province: customer.province || "",
+        city: customer.city || "",
+        address: customer.address || "",
+        postalCode: customer.postalCode || "",
+      }));
+    } else if (admin) {
+      profileFilled.current = true;
+      setForm((f) => ({
+        ...f,
+        firstName: admin.firstName || "مدیر",
+        lastName: admin.lastName || "",
+      }));
+    }
+  }, [customer, admin]);
+
+  const clearField = (key: "address" | "postalCode") => {
+    setForm((prev) => ({ ...prev, [key]: "" }));
+    setErrors((prev) => ({ ...prev, [key]: "" }));
+  };
+
+  const cityOptions = useMemo(
+    () => getCitiesForProvince(form.province),
+    [form.province],
+  );
 
   const rows = useMemo(
     () =>
@@ -64,20 +104,89 @@ export default function CheckoutPage() {
     [items, getProduct],
   );
 
-  const appliedCoupon = couponCode ? findCoupon(coupons, couponCode) : undefined;
   const subtotal = rows.reduce((sum, row) => sum + (row.product?.price ?? 0) * row.qty, 0);
-  const discount = calcCouponDiscount(subtotal, appliedCoupon);
-  const shipping = subtotal > 500000 ? 0 : 60000;
-  const total = Math.max(0, subtotal - discount + shipping);
+  const total = Math.max(0, subtotal - discount);
+
+  useEffect(() => {
+    if (!appliedCode || subtotal <= 0) {
+      if (!appliedCode) setDiscount(0);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await api.validateCoupon(appliedCode, subtotal);
+        if (cancelled) return;
+        if (res.valid) {
+          setDiscount(res.discount);
+          setCouponMessage(`کد تخفیف ${res.coupon?.code || appliedCode} اعمال شد`);
+          setCouponError("");
+        } else {
+          setDiscount(0);
+          setAppliedCode("");
+          setCouponDraft("");
+          setCouponMessage("");
+          setCouponError(res.message || "کد تخفیف دیگر معتبر نیست.");
+        }
+      } catch {
+        if (!cancelled) {
+          setDiscount(0);
+          setAppliedCode("");
+          setCouponMessage("");
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [appliedCode, subtotal]);
+
+  const applyCoupon = async () => {
+    const code = couponDraft.trim();
+    if (!code) {
+      setCouponError("کد تخفیف را وارد کنید.");
+      setCouponMessage("");
+      return;
+    }
+    setApplyingCoupon(true);
+    setCouponError("");
+    setCouponMessage("");
+    try {
+      const res = await api.validateCoupon(code, subtotal);
+      if (!res.valid) {
+        setDiscount(0);
+        setAppliedCode("");
+        setCouponError(res.message || "کد تخفیف معتبر نیست.");
+        return;
+      }
+      const finalCode = res.coupon?.code || code.toUpperCase();
+      setAppliedCode(finalCode);
+      setCouponDraft(finalCode);
+      setDiscount(res.discount);
+      setCouponMessage(`کد تخفیف ${finalCode} اعمال شد`);
+    } catch (err) {
+      setCouponError(err instanceof Error ? err.message : "بررسی کد ناموفق بود.");
+    } finally {
+      setApplyingCoupon(false);
+    }
+  };
+
+  const clearCoupon = () => {
+    setAppliedCode("");
+    setCouponDraft("");
+    setDiscount(0);
+    setCouponMessage("");
+    setCouponError("");
+  };
 
   const validateForm = () => {
     const nextErrors: Partial<Record<keyof CheckoutForm, string>> = {};
 
     if (!form.firstName.trim()) nextErrors.firstName = "نام را وارد کنید.";
     if (!form.lastName.trim()) nextErrors.lastName = "نام خانوادگی را وارد کنید.";
-    if (!/^09\d{9}$/.test(form.phone.trim())) nextErrors.phone = "شماره تماس معتبر وارد کنید.";
-    if (!form.province.trim()) nextErrors.province = "استان را وارد کنید.";
-    if (!form.city.trim()) nextErrors.city = "شهر را وارد کنید.";
+    if (!isValidIranMobile(form.phone)) nextErrors.phone = "شماره موبایل معتبر وارد کنید (مثال: 09123456789).";
+    if (!form.province.trim()) nextErrors.province = "استان را انتخاب کنید.";
+    if (!form.city.trim()) nextErrors.city = "شهر را انتخاب کنید.";
     if (!form.address.trim() || form.address.trim().length < 10)
       nextErrors.address = "آدرس کامل را وارد کنید.";
     if (!/^\d{10}$/.test(form.postalCode.trim()))
@@ -87,8 +196,8 @@ export default function CheckoutPage() {
     return Object.keys(nextErrors).length === 0;
   };
 
-  const submitOrder = () => {
-    if (!validateForm()) return;
+  const submitOrder = async () => {
+    if (!validateForm() || submitting) return;
 
     const overStock = rows.find((row) => row.qty > getAvailableStock(row.id));
     if (overStock) {
@@ -104,46 +213,52 @@ export default function CheckoutPage() {
       return;
     }
 
-    const code = createTrackingCode();
-    const order: Order = {
-      id: `ord-${Date.now()}`,
-      trackingCode: code,
-      createdAt: new Date().toISOString(),
-      status: "pending",
-      customer: {
-        firstName: form.firstName.trim(),
-        lastName: form.lastName.trim(),
-        phone: form.phone.trim(),
-        province: form.province.trim(),
-        city: form.city.trim(),
-        address: form.address.trim(),
-        postalCode: form.postalCode.trim(),
-        notes: form.notes.trim() || undefined,
-      },
-      items: rows.map((row) => ({
-        productId: row.id,
-        name: row.product!.name,
-        price: row.product!.price,
-        qty: row.qty,
-        image: row.product!.image,
-      })),
-      subtotal,
-      shipping,
-      discount,
-      total,
-      couponCode: appliedCoupon?.code,
-    };
-
-    addOrder(order);
-    decreaseStock(rows.map((row) => ({ id: row.id, qty: row.qty })));
-    try {
-      window.sessionStorage.removeItem(COUPON_STORAGE_KEY);
-    } catch {}
-    setTrackingCode(code);
-    setSubmittedName(`${form.firstName} ${form.lastName}`);
-    setCopyMessage("");
+    setSubmitting(true);
     setStockError("");
-    clearCart();
+    try {
+      await refreshShop();
+      const check = await api.validateCart(
+        rows.map((row) => ({ productId: row.id, qty: row.qty })),
+      );
+      if (!check.ok) {
+        const bad = check.lines.find((l) => !l.ok);
+        throw new Error(
+          bad?.reason === "max_stock"
+            ? `موجودی کافی نیست (حداکثر ${bad.availableStock.toLocaleString("fa-IR")}).`
+            : "برخی محصولات ناموجود شده‌اند.",
+        );
+      }
+
+      const order = await placeOrder({
+        customer: {
+          firstName: form.firstName.trim(),
+          lastName: form.lastName.trim(),
+          phone: form.phone.trim(),
+          province: form.province.trim(),
+          city: form.city.trim(),
+          address: form.address.trim(),
+          postalCode: form.postalCode.trim(),
+          notes: form.notes.trim() || undefined,
+        },
+        items: rows.map((row) => ({
+          productId: row.id,
+          qty: row.qty,
+        })),
+        couponCode: appliedCode || undefined,
+      });
+      setTrackingCode(order.trackingCode);
+      setSubmittedName(`${form.firstName} ${form.lastName}`);
+      setCopyMessage("");
+      clearCart();
+      void refresh();
+      clearCoupon();
+    } catch (err) {
+      setStockError(
+        err instanceof Error ? err.message : "ثبت سفارش انجام نشد. دوباره تلاش کنید.",
+      );
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const copyTrackingCode = async () => {
@@ -237,13 +352,10 @@ export default function CheckoutPage() {
                   { key: "firstName", label: "نام", placeholder: "نام" },
                   { key: "lastName", label: "نام خانوادگی", placeholder: "نام خانوادگی" },
                   { key: "phone", label: "شماره تماس", placeholder: "09123456789" },
-                  { key: "postalCode", label: "کد پستی", placeholder: "کد پستی ۱۰ رقمی" },
-                  { key: "province", label: "استان", placeholder: "استان" },
-                  { key: "city", label: "شهر", placeholder: "شهر" },
                 ] as const
               ).map((field) => (
                 <label key={field.key} className="block">
-                  <span className="block text-sm font-medium text-[#4e2e0e] mb-2">{field.label}</span>
+                  <span className="mb-2 block text-sm font-medium text-[#4e2e0e]">{field.label}</span>
                   <input
                     value={form[field.key]}
                     onChange={(e) => {
@@ -254,26 +366,123 @@ export default function CheckoutPage() {
                     className="w-full rounded-2xl border border-[#e8cfa8] bg-[#fffaf5] px-4 py-3 text-sm text-[#2e1a08] focus:outline-none focus:border-[#a96c20]"
                   />
                   {errors[field.key] && (
-                    <span className="text-xs text-red-600 mt-1 block">{errors[field.key]}</span>
+                    <span className="mt-1 block text-xs text-red-600">{errors[field.key]}</span>
                   )}
                 </label>
               ))}
+
+              <div className="block">
+                <span className="mb-2 block text-sm font-medium text-[#4e2e0e]">استان</span>
+                <SearchableSelect
+                  id="province"
+                  value={form.province}
+                  options={IRAN_PROVINCE_NAMES}
+                  open={openSelect === "province"}
+                  onOpenChange={setOpenSelect}
+                  placeholder="انتخاب استان"
+                  searchPlaceholder="جستجوی استان..."
+                  onChange={(province) => {
+                    setForm((prev) => ({
+                      ...prev,
+                      province,
+                      city: getCitiesForProvince(province).includes(prev.city) ? prev.city : "",
+                    }));
+                    setErrors((prev) => ({ ...prev, province: "", city: "" }));
+                  }}
+                />
+                {errors.province && (
+                  <span className="mt-1 block text-xs text-red-600">{errors.province}</span>
+                )}
+              </div>
+
+              <div className="block">
+                <span className="mb-2 block text-sm font-medium text-[#4e2e0e]">شهر</span>
+                <SearchableSelect
+                  id="city"
+                  value={form.city}
+                  options={cityOptions}
+                  open={openSelect === "city"}
+                  onOpenChange={setOpenSelect}
+                  placeholder={form.province ? "انتخاب شهر" : "ابتدا استان را انتخاب کنید"}
+                  searchPlaceholder="جستجوی شهر..."
+                  disabled={!form.province}
+                  onChange={(city) => {
+                    setForm((prev) => ({ ...prev, city }));
+                    setErrors((prev) => ({ ...prev, city: "" }));
+                  }}
+                />
+                {errors.city && (
+                  <span className="mt-1 block text-xs text-red-600">{errors.city}</span>
+                )}
+              </div>
+
+              <label className="block">
+                <span className="mb-2 block text-sm font-medium text-[#4e2e0e]">کد پستی</span>
+                <div className="relative">
+                  <input
+                    value={form.postalCode}
+                    onChange={(e) => {
+                      setForm((prev) => ({ ...prev, postalCode: e.target.value }));
+                      setErrors((prev) => ({ ...prev, postalCode: "" }));
+                    }}
+                    placeholder="کد پستی ۱۰ رقمی"
+                    className={`w-full rounded-2xl border border-[#e8cfa8] bg-[#fffaf5] py-3 ps-5 text-sm text-[#2e1a08] focus:outline-none focus:border-[#a96c20] ${
+                      form.postalCode.trim() ? "pl-12" : "pe-4"
+                    }`}
+                  />
+                  {form.postalCode.trim() ? (
+                    <button
+                      type="button"
+                      onClick={() => clearField("postalCode")}
+                      aria-label="پاک کردن کد پستی"
+                      title="پاک کردن کد پستی"
+                      className="absolute left-3 top-1/2 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-[#ead7bb] bg-white text-[#8a5419] shadow-sm transition hover:border-red-300 hover:bg-red-50 hover:text-red-600"
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                        <path d="M18 6 6 18" />
+                        <path d="m6 6 12 12" />
+                      </svg>
+                    </button>
+                  ) : null}
+                </div>
+                {errors.postalCode && (
+                  <span className="mt-1 block text-xs text-red-600">{errors.postalCode}</span>
+                )}
+              </label>
             </div>
 
-            <label className="block mt-4">
-              <span className="block text-sm font-medium text-[#4e2e0e] mb-2">آدرس کامل</span>
-              <textarea
-                value={form.address}
-                onChange={(e) => {
-                  setForm((prev) => ({ ...prev, address: e.target.value }));
-                  setErrors((prev) => ({ ...prev, address: "" }));
-                }}
-                placeholder="آدرس دقیق، پلاک، واحد و توضیحات لازم برای ارسال"
-                rows={4}
-                className="w-full rounded-2xl border border-[#e8cfa8] bg-[#fffaf5] px-4 py-3 text-sm text-[#2e1a08] focus:outline-none focus:border-[#a96c20]"
-              />
-              {errors.address && <span className="text-xs text-red-600 mt-1 block">{errors.address}</span>}
-            </label>
+            <div className="mt-4">
+              <span className="mb-2 block text-sm font-medium text-[#4e2e0e]">آدرس کامل</span>
+              <div className="relative">
+                <textarea
+                  value={form.address}
+                  onChange={(e) => {
+                    setForm((prev) => ({ ...prev, address: e.target.value }));
+                    setErrors((prev) => ({ ...prev, address: "" }));
+                  }}
+                  placeholder="آدرس دقیق، پلاک، واحد و توضیحات لازم برای ارسال"
+                  rows={4}
+                  className={`w-full rounded-2xl border border-[#e8cfa8] bg-[#fffaf5] py-3 ps-5 text-sm text-[#2e1a08] focus:outline-none focus:border-[#a96c20] ${
+                    form.address.trim() ? "pl-12" : "pe-4"
+                  }`}
+                />
+                {form.address.trim() ? (
+                  <button
+                    type="button"
+                    onClick={() => clearField("address")}
+                    aria-label="پاک کردن آدرس"
+                    title="پاک کردن آدرس"
+                    className="absolute left-3 top-3 inline-flex h-8 w-8 items-center justify-center rounded-full border border-[#ead7bb] bg-white text-[#8a5419] shadow-sm transition hover:border-red-300 hover:bg-red-50 hover:text-red-600"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <path d="M18 6 6 18" />
+                      <path d="m6 6 12 12" />
+                    </svg>
+                  </button>
+                ) : null}
+              </div>
+              {errors.address && <span className="mt-1 block text-xs text-red-600">{errors.address}</span>}
+            </div>
 
             <label className="block mt-4">
               <span className="block text-sm font-medium text-[#4e2e0e] mb-2">توضیحات سفارش (اختیاری)</span>
@@ -303,7 +512,7 @@ export default function CheckoutPage() {
                     </div>
                   </div>
                   <div className="font-bold text-[#2e1a08] shrink-0 text-left">
-                    {((row.product?.price ?? 0) * row.qty).toLocaleString("fa-IR")} تومان
+                    <PriceText amount={(row.product?.price ?? 0) * row.qty} />
                   </div>
                 </div>
               ))}
@@ -312,24 +521,72 @@ export default function CheckoutPage() {
             <div className="space-y-2 text-sm mb-5">
               <div className="flex justify-between">
                 <span>جمع کل</span>
-                <span>{subtotal.toLocaleString("fa-IR")} تومان</span>
+                <span>
+                  <PriceText amount={subtotal} />
+                </span>
               </div>
               {discount > 0 && (
                 <div className="flex justify-between text-green-700">
-                  <span>تخفیف {appliedCoupon?.code}</span>
-                  <span>{discount.toLocaleString("fa-IR")} تومان</span>
+                  <span>تخفیف</span>
+                  <span>
+                    <PriceText amount={discount} />
+                  </span>
                 </div>
               )}
-              <div className="flex justify-between">
-                <span>هزینه ارسال</span>
-                <span>
-                  {shipping === 0 ? "رایگان" : `${shipping.toLocaleString("fa-IR")} تومان`}
-                </span>
-              </div>
               <div className="flex justify-between font-bold text-[#2e1a08] border-t pt-3">
                 <span>مبلغ نهایی</span>
-                <span>{total.toLocaleString("fa-IR")} تومان</span>
+                <span>
+                  <PriceText amount={total} />
+                </span>
               </div>
+            </div>
+
+            <div className="mb-4">
+              <label className="mb-2 block text-sm font-medium text-[#4e2e0e]">کد تخفیف</label>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <input
+                  value={couponDraft}
+                  onChange={(e) => {
+                    setCouponDraft(e.target.value);
+                    setCouponError("");
+                  }}
+                  placeholder="کد تخفیف را وارد کنید"
+                  disabled={Boolean(appliedCode)}
+                  dir={couponDraft ? "ltr" : "rtl"}
+                  className={`min-w-0 flex-1 rounded-xl border border-[#e8cfa8] bg-[#fffaf5] px-3 py-2.5 text-sm focus:border-[#a96c20] focus:outline-none disabled:opacity-70 ${
+                    couponDraft ? "text-left" : "text-right"
+                  }`}
+                />
+                {!appliedCode ? (
+                  <button
+                    type="button"
+                    disabled={applyingCoupon}
+                    onClick={() => void applyCoupon()}
+                    className="shrink-0 rounded-xl bg-[#6d4014] px-4 py-2.5 text-sm text-white disabled:opacity-60"
+                  >
+                    {applyingCoupon ? "..." : "اعمال"}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={clearCoupon}
+                    className="shrink-0 rounded-xl border border-[#ead7bb] px-4 py-2.5 text-sm text-[#6d4014]"
+                  >
+                    حذف کد
+                  </button>
+                )}
+              </div>
+              {couponError && (
+                <p className="mt-2 text-xs text-red-600">{couponError}</p>
+              )}
+              {couponMessage && (
+                <p className="mt-2 text-xs font-medium text-green-700">{couponMessage}</p>
+              )}
+              <p className="mt-2 text-xs text-[#a96c20]">
+                <Link href="/account/discounts" className="font-medium text-[#8a5419] hover:underline">
+                  مشاهده تخفیف‌ها
+                </Link>
+              </p>
             </div>
 
             {stockError && (

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { fileToCompressedDataUrl } from "../lib/image-compress";
+import { api } from "../lib/api";
 import { MAX_PRODUCT_IMAGES } from "../lib/product-images";
 
 type Props = {
@@ -45,7 +45,8 @@ export default function MultiImageUploadField({
 
       const next: string[] = [...value];
       for (let i = 0; i < slots; i += 1) {
-        next.push(await fileToCompressedDataUrl(list[i]));
+        const uploaded = await api.uploadImage(list[i]);
+        next.push(uploaded.url);
       }
       onChange(next);
     } catch (err) {

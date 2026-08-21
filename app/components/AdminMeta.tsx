@@ -40,6 +40,32 @@ export function PhoneBadge({ phone, className = "" }: { phone: string; className
   );
 }
 
+export function EmailBadge({ email, className = "" }: { email: string; className?: string }) {
+  return (
+    <a
+      href={`mailto:${email}`}
+      className={`inline-flex max-w-full items-center gap-1.5 rounded-full border border-[#dce8f5] bg-[#f5f9fd] px-2.5 py-1 transition-colors hover:border-[#b7d0ea] hover:bg-[#ebf3fb] ${className}`}
+      title={email}
+    >
+      <svg
+        width="12"
+        height="12"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={2}
+        className="shrink-0 text-[#5b82a8]"
+      >
+        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+        <path d="m22 6-10 7L2 6" />
+      </svg>
+      <span dir="ltr" className="truncate text-xs font-medium tracking-wide text-[#3d5a73]">
+        {email}
+      </span>
+    </a>
+  );
+}
+
 export function DateTimeBadge({
   value,
   className = "",

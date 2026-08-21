@@ -1,16 +1,84 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
+import BackLink from "../components/BackLink";
 import ProductCard from "../components/ProductCard";
 import { useShop } from "../components/ShopProvider";
 import { useWishlist } from "../components/WishlistProvider";
 import type { Product } from "../lib/shop-types";
 
+function ClearWishlistDialog({
+  open,
+  onCancel,
+  onConfirm,
+}: {
+  open: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  useEffect(() => {
+    if (!open) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onCancel();
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [open, onCancel]);
+
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4">
+      <button
+        type="button"
+        aria-label="بستن"
+        className="absolute inset-0 bg-[#2e1a08]/45 backdrop-blur-[2px]"
+        onClick={onCancel}
+      />
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="clear-wishlist-dialog-title"
+        className="relative max-h-[min(90dvh,28rem)] w-full max-w-md overflow-y-auto overscroll-contain rounded-[24px] border border-[#ead7bb] bg-white p-5 shadow-[0_24px_60px_rgba(89,48,10,0.22)] sm:rounded-[28px] sm:p-6"
+      >
+        <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-red-50 text-red-600">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+          </svg>
+        </div>
+        <h2 id="clear-wishlist-dialog-title" className="mb-2 text-lg font-black text-[#3d2410]">
+          خالی کردن علاقه‌مندی‌ها
+        </h2>
+        <p className="mb-6 text-sm leading-7 text-[#6d4014]">
+          آیا مطمئن هستید که می‌خواهید همه محصولات را از لیست علاقه‌مندی‌ها حذف کنید؟
+        </p>
+        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:gap-3">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="flex-1 rounded-2xl border border-[#ead7bb] bg-[#fffaf5] py-3 text-sm font-medium text-[#4e2e0e] transition-colors hover:border-[#d4a96a] hover:text-[#8a5419]"
+          >
+            انصراف
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            className="flex-1 rounded-2xl bg-red-600 py-3 text-sm font-bold text-white transition-colors hover:bg-red-700"
+          >
+            بله، خالی شود
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function WishlistPage() {
   const { ids, clearWishlist, totalItems } = useWishlist();
   const { getActiveProducts } = useShop();
   const products = getActiveProducts();
+  const [clearOpen, setClearOpen] = useState(false);
 
   const rows = useMemo(
     () =>
@@ -25,6 +93,9 @@ export default function WishlistPage() {
       <div className="max-w-7xl mx-auto px-4 lg:px-6 xl:px-4 py-8 sm:py-12">
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-6 sm:mb-8">
           <div>
+            <BackLink href="/products" className="mb-2">
+              ادامه خرید
+            </BackLink>
             <h1 className="text-2xl sm:text-3xl font-black text-[#2e1a08]">علاقه‌مندی‌ها</h1>
             <p className="text-sm text-[#a96c20] mt-1">
               {totalItems > 0
@@ -35,7 +106,7 @@ export default function WishlistPage() {
           {rows.length > 0 && (
             <button
               type="button"
-              onClick={clearWishlist}
+              onClick={() => setClearOpen(true)}
               className="self-start rounded-full border border-red-200 bg-white px-4 py-2 text-sm text-red-600 hover:bg-red-50"
             >
               خالی کردن لیست
@@ -89,6 +160,15 @@ export default function WishlistPage() {
           </div>
         )}
       </div>
+
+      <ClearWishlistDialog
+        open={clearOpen}
+        onCancel={() => setClearOpen(false)}
+        onConfirm={() => {
+          clearWishlist();
+          setClearOpen(false);
+        }}
+      />
     </div>
   );
 }

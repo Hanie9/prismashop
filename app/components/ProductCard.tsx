@@ -58,7 +58,7 @@ export default function ProductCard({ product }: { product: Product }) {
               </span>
             ) : isLowStock(product) ? (
               <span className="bg-amber-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
-                موجودی کم
+                موجودی کم — {stock.toLocaleString("fa-IR")}
               </span>
             ) : null}
           </div>
@@ -179,20 +179,19 @@ export default function ProductCard({ product }: { product: Product }) {
                 width="12"
                 height="12"
                 viewBox="0 0 24 24"
-                fill={star <= product.rating ? "#d4a96a" : "none"}
+                fill={star <= Math.round(product.rating) ? "#d4a96a" : "none"}
                 stroke="#d4a96a"
                 strokeWidth={2}
               >
                 <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
               </svg>
             ))}
-            <span className="text-[10px] text-[#a96c20] mr-0.5">({product.reviewCount})</span>
           </div>
 
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
             <span className="font-bold text-[#4e2e0e] text-sm sm:text-base">
               {product.price.toLocaleString("fa-IR")}
-              <span className="text-[11px] sm:text-xs font-medium me-1">تومان</span>
+              <span className="ms-[1mm] inline-block text-[11px] sm:text-xs font-medium">تومان</span>
             </span>
             {product.originalPrice && (
               <span className="text-[10px] sm:text-xs text-gray-400 line-through">

@@ -5,17 +5,9 @@ import { type FormEvent, useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useCart } from "./CartProvider";
 import DialogCloseButton from "./DialogCloseButton";
+import { useAuth } from "./SessionProvider";
 import { useShop } from "./ShopProvider";
 import { useWishlist } from "./WishlistProvider";
-
-const SESSION_STORAGE_KEY = "prismashop-session";
-
-type Session = {
-  email: string;
-  fullName: string;
-  remember: boolean;
-  loggedInAt: string;
-};
 
 function LogoutIcon() {
   return (
@@ -187,6 +179,7 @@ export default function Navbar() {
   const { totalItems } = useCart();
   const { totalItems: wishlistCount } = useWishlist();
   const { categories: shopCategories } = useShop();
+  const { isLoggedIn, displayName, logout, isAdmin } = useAuth();
   const categories = shopCategories.map((cat) => ({
     name: cat.name,
     href: `/products?cat=${cat.id}`,
@@ -194,27 +187,7 @@ export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [catsOpen, setCatsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [session, setSession] = useState<Session | null>(null);
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
-
-  useEffect(() => {
-    const loadSession = () => {
-      try {
-        const raw = window.localStorage.getItem(SESSION_STORAGE_KEY);
-        setSession(raw ? JSON.parse(raw) : null);
-      } catch {
-        setSession(null);
-      }
-    };
-
-    loadSession();
-    window.addEventListener("storage", loadSession);
-    window.addEventListener("prismashop-auth-change", loadSession);
-    return () => {
-      window.removeEventListener("storage", loadSession);
-      window.removeEventListener("prismashop-auth-change", loadSession);
-    };
-  }, [pathname]);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -252,17 +225,15 @@ export default function Navbar() {
     closeMenu();
   };
 
-  const handleLogout = () => {
-    window.localStorage.removeItem(SESSION_STORAGE_KEY);
-    setSession(null);
+  const handleLogout = async () => {
+    await logout();
     setMenuOpen(false);
     setLogoutDialogOpen(false);
-    window.dispatchEvent(new Event("prismashop-auth-change"));
     router.push("/");
     router.refresh();
   };
 
-  const displayName = session?.fullName || session?.email || "";
+  const session = isLoggedIn;
 
   return (
     <header className="sticky top-0 z-50 w-full">
@@ -325,7 +296,17 @@ export default function Navbar() {
               {!session ? (
                 <LoginAuthLink />
               ) : (
-                <UserSessionBadge displayName={displayName} onLogoutClick={() => setLogoutDialogOpen(true)} />
+                <div className="hidden lg:flex items-center gap-2">
+                  {isAdmin && (
+                    <Link
+                      href="/admin"
+                      className="rounded-full border border-[#ead7bb] bg-[#fffaf5] px-3 py-2 text-xs font-bold text-[#8a5419] hover:border-[#d4a96a]"
+                    >
+                      پنل ادمین
+                    </Link>
+                  )}
+                  <UserSessionBadge displayName={displayName} onLogoutClick={() => setLogoutDialogOpen(true)} />
+                </div>
               )}
 
               <Link
@@ -404,12 +385,14 @@ export default function Navbar() {
               ))}
             </div>
 
-            <Link
-              href="/products?sale=true"
-              className="shrink-0 rounded-full border border-[#f1d6b0] bg-[#fff6ea] px-3 xl:px-4 py-2 text-xs font-semibold text-[#a96c20] hover:border-[#d4a96a] hover:text-[#8a5419] whitespace-nowrap"
-            >
-              تخفیف‌های ویژه
-            </Link>
+            {session && !isAdmin && (
+              <Link
+                href="/account/orders"
+                className="shrink-0 rounded-full border border-[#f1d6b0] bg-[#fff6ea] px-3 xl:px-4 py-2 text-xs font-semibold text-[#a96c20] hover:border-[#d4a96a] hover:text-[#8a5419] whitespace-nowrap"
+              >
+                سفارش‌ها
+              </Link>
+            )}
           </div>
         </div>
       </nav>
@@ -489,14 +472,15 @@ export default function Navbar() {
                   </Link>
                 );
               })}
-              <Link
-                href="/products?sale=true"
-                onClick={closeMenu}
-                className="flex items-center justify-between rounded-2xl px-3.5 py-3 text-sm font-semibold text-[#a96c20] hover:bg-[#fff6ea]"
-              >
-                <span>تخفیف‌های ویژه</span>
-                <span className="rounded-full bg-[#fff6ea] px-2 py-0.5 text-[10px] font-bold text-[#8a5419]">٪</span>
-              </Link>
+              {session && !isAdmin && (
+                <Link
+                  href="/account/orders"
+                  onClick={closeMenu}
+                  className="flex items-center justify-between rounded-2xl px-3.5 py-3 text-sm font-semibold text-[#a96c20] hover:bg-[#fff6ea]"
+                >
+                  <span>سفارش‌ها</span>
+                </Link>
+              )}
             </div>
 
             <div className="overflow-hidden rounded-2xl border border-[#ead7bb] bg-white">
@@ -541,7 +525,9 @@ export default function Navbar() {
                 ورود / عضویت
               </Link>
             ) : (
-              <UserSessionMobileRow displayName={displayName} onLogoutClick={() => setLogoutDialogOpen(true)} />
+              <div className="space-y-2">
+                <UserSessionMobileRow displayName={displayName} onLogoutClick={() => setLogoutDialogOpen(true)} />
+              </div>
             )}
           </div>
         </aside>

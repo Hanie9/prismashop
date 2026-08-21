@@ -3,8 +3,11 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { type ReactNode, useEffect, useState } from "react";
-import { clearAdminSession, getAdminSession } from "../lib/admin-auth";
+import { clearAdminSession, getAdminSession, logoutAdmin } from "../lib/admin-auth";
 import DialogCloseButton from "./DialogCloseButton";
+import PageLoader from "./PageLoader";
+import PullToRefresh from "./PullToRefresh";
+import { useAuth } from "./SessionProvider";
 import { useShop } from "./ShopProvider";
 
 const links = [
@@ -13,6 +16,7 @@ const links = [
   { href: "/admin/categories", label: "دسته‌بندی‌ها" },
   { href: "/admin/orders", label: "سفارش‌ها" },
   { href: "/admin/customers", label: "مشتریان" },
+  { href: "/admin/reviews", label: "نظرات" },
   { href: "/admin/discounts", label: "تخفیف‌ها" },
   { href: "/admin/inventory", label: "موجودی" },
 ];
@@ -91,21 +95,26 @@ function AdminLogoutDialog({
 export default function AdminShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { orders, products } = useShop();
+  const { orders, products, hydrated: shopHydrated } = useShop();
+  const { isAdmin, ready: authReady, refresh } = useAuth();
   const [ready, setReady] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
 
   useEffect(() => {
-    if (!getAdminSession() && pathname !== "/admin/login") {
+    if (!authReady) return;
+    const ok = isAdmin || getAdminSession();
+    if (!ok && pathname !== "/admin/login") {
       router.replace("/admin/login");
       return;
     }
     setReady(true);
-  }, [pathname, router]);
+  }, [pathname, router, isAdmin, authReady]);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await logoutAdmin();
     clearAdminSession();
+    await refresh();
     setLogoutDialogOpen(false);
     setMenuOpen(false);
     router.replace("/admin/login");
@@ -115,10 +124,10 @@ export default function AdminShell({ children }: { children: ReactNode }) {
     return <>{children}</>;
   }
 
-  if (!ready) {
+  if (!ready || !shopHydrated) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#f4efe6] text-sm text-[#6d4014]">
-        در حال بارگذاری پنل...
+      <div className="flex min-h-screen items-center justify-center bg-[#f4efe6]">
+        <PageLoader label="در حال بارگذاری پنل..." />
       </div>
     );
   }
@@ -159,6 +168,7 @@ export default function AdminShell({ children }: { children: ReactNode }) {
   );
 
   return (
+    <PullToRefresh>
     <div className="min-h-screen bg-[#f4efe6] text-[#2e1a08]">
       <div className="flex min-h-screen">
         <aside className="hidden w-64 shrink-0 border-l border-[#ead7bb] bg-[#1f1207] p-5 text-[#f3e2c8] lg:flex lg:flex-col">
@@ -284,5 +294,6 @@ export default function AdminShell({ children }: { children: ReactNode }) {
         onConfirm={handleLogout}
       />
     </div>
+    </PullToRefresh>
   );
 }

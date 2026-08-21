@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import BackLink from "../../components/BackLink";
 import { blogPosts } from "../../data/blog-posts";
 
 export default async function BlogDetailPage({
@@ -16,7 +17,7 @@ export default async function BlogDetailPage({
   return (
     <div className="min-h-screen bg-[#faf6ee]">
       <div className="max-w-4xl mx-auto px-4 py-8 sm:py-12">
-        <Link href="/blog" className="text-sm text-[#6d4014] hover:text-[#a96c20]">← بازگشت به بلاگ</Link>
+        <BackLink href="/blog">بازگشت به بلاگ</BackLink>
         <article className="bg-white border border-[#e8cfa8] rounded-3xl overflow-hidden mt-4">
           <img src={post.cover} alt={post.title} className="w-full h-48 sm:h-64 md:h-72 object-cover" />
           <div className="p-5 sm:p-8">

@@ -15,7 +15,6 @@ const footerLinks = {
     { name: "درباره ما", href: "/about" },
     { name: "تماس با ما", href: "/contact" },
     { name: "پیگیری سفارش", href: "/track-order" },
-    { name: "قوانین و مقررات", href: "/terms" },
     { name: "حریم خصوصی", href: "/privacy" },
   ],
 };

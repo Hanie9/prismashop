@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import ProductCard from "./components/ProductCard";
 import { useShop } from "./components/ShopProvider";
+import { api, type FeaturedReview } from "./lib/api";
 
 export default function Home() {
   const { getActiveProducts, categories, products: allProducts } = useShop();
@@ -12,6 +14,22 @@ export default function Home() {
     ...products.filter((product) => product.categoryId !== "calligraphy"),
   ].slice(0, 8);
   const newProducts = products.filter((p) => p.isNew);
+  const [testimonials, setTestimonials] = useState<FeaturedReview[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    api
+      .listFeaturedReviews()
+      .then((list) => {
+        if (!cancelled) setTestimonials(list);
+      })
+      .catch(() => {
+        if (!cancelled) setTestimonials([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   return (
     <div className="min-h-screen">
@@ -251,6 +269,7 @@ export default function Home() {
       </section>
 
       {/* Testimonials */}
+      {testimonials.length > 0 && (
       <section className="mx-4 lg:mx-auto lg:max-w-7xl lg:px-6 xl:px-4 pb-12 sm:pb-16">
         <div className="bg-[#f5e9d5] rounded-[28px] md:rounded-[36px] px-5 md:px-10 py-10 sm:py-12 md:py-14 border border-[#e8cfa8]">
           <div className="text-center mb-8 sm:mb-10">
@@ -258,30 +277,8 @@ export default function Home() {
             <p className="text-[#a96c20] text-sm mt-1">تجربه واقعی خریداران آثار کالیگرافی پریسما شاپ</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
-            {[
-              {
-                name: "علی رضایی",
-                role: "طراح دکور داخلی",
-                text: "تابلوی کالیگرافی که گرفتم از نزدیک خیلی بهتر از عکس بود. برش‌ها تمیز و بسته‌بندی هم کاملاً حرفه‌ای انجام شده بود.",
-                rating: 5,
-                avatar: "ع",
-              },
-              {
-                name: "مریم محمدی",
-                role: "مشتری وفادار",
-                text: "برای دیوار پذیرایی مدل آینه‌ای سفارش دادم. دقیقاً متناسب با فضا بود و تیم پشتیبانی برای انتخاب سایز خیلی خوب راهنمایی کرد.",
-                rating: 5,
-                avatar: "م",
-              },
-              {
-                name: "حسن کریمی",
-                role: "مدیر دفتر معماری",
-                text: "برای دفتر کار چند مدل کالیگرافی گرفتیم. هم کیفیت ساخت عالی بود هم زمان ارسال دقیق. حتماً دوباره سفارش می‌دیم.",
-                rating: 5,
-                avatar: "ح",
-              },
-            ].map((t, i) => (
-              <div key={i} className="bg-white rounded-[22px] p-6 border border-[#e8cfa8] hover:border-[#c2883a] transition-colors shadow-sm">
+            {testimonials.map((t) => (
+              <div key={t.id} className="bg-white rounded-[22px] p-6 border border-[#e8cfa8] hover:border-[#c2883a] transition-colors shadow-sm">
                 <div className="flex items-center gap-1 mb-4">
                   {[1, 2, 3, 4, 5].map((s) => (
                     <svg key={s} width="14" height="14" viewBox="0 0 24 24" fill={s <= t.rating ? "#d4a96a" : "none"} stroke="#d4a96a" strokeWidth={2}>
@@ -289,7 +286,7 @@ export default function Home() {
                     </svg>
                   ))}
                 </div>
-                <p className="text-sm text-[#4e2e0e] leading-7 mb-4">"{t.text}"</p>
+                <p className="text-sm text-[#4e2e0e] leading-7 mb-4">&ldquo;{t.text}&rdquo;</p>
                 <div className="flex items-center gap-3">
                   <div className="w-9 h-9 rounded-full bg-[#6d4014] flex items-center justify-center text-white font-bold text-sm">
                     {t.avatar}
@@ -304,6 +301,7 @@ export default function Home() {
           </div>
         </div>
       </section>
+      )}
     </div>
   );
 }

@@ -84,7 +84,7 @@ export default function AdminDashboardPage() {
             <h2 className="font-bold text-[#2e1a08]">فروش تاییدشده</h2>
             <p className="mt-3 text-2xl font-black text-[#6d4014]">
               {revenue.toLocaleString("fa-IR")}
-              <span className="ms-1 text-sm font-medium">تومان</span>
+              <span className="ms-[1mm] inline-block text-sm font-medium">تومان</span>
             </p>
             <p className="mt-2 text-xs text-[#a96c20]">
               {orders.filter((o) => o.status !== "cancelled").length.toLocaleString("fa-IR")} سفارش

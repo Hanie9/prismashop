@@ -24,7 +24,12 @@ const statusTone: Record<Order["status"], string> = {
 };
 
 function formatMoney(value: number) {
-  return `${value.toLocaleString("fa-IR")} تومان`;
+  return (
+    <>
+      {value.toLocaleString("fa-IR")}
+      <span className="ms-[1mm] inline-block">تومان</span>
+    </>
+  );
 }
 
 function CustomerCell({
