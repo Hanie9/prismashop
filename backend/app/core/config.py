@@ -15,10 +15,13 @@ class Settings(BaseSettings):
 
     DATABASE_URL: str = "postgresql+psycopg://prisma:prisma@localhost:5432/prismashop"
     SECRET_KEY: str = "dev-secret-change-me-prismashop"
+    ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7
 
     # Session (server-side)
     SESSION_COOKIE_NAME: str = "prismashop_session"
     SESSION_HEADER_NAME: str = "X-Session-Id"
+    SESSION_COOKIE_SECURE: bool = False
     SESSION_EXPIRE_DAYS: int = 14
     SESSION_SHORT_EXPIRE_DAYS: int = 1
     SESSION_GUEST_EXPIRE_DAYS: int = 7

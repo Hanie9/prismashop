@@ -1,0 +1,52 @@
+name: Deploy to production
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Deploy to big-in
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install SSH key
+        uses: shimataro/ssh-key-action@v2
+        with:
+          key: ${{ secrets.SSH_KEY }}
+          known_hosts: unnecessary
+
+      - name: Add known hosts
+        run: ssh-keyscan -p "${{ secrets.PORT }}" -H "${{ secrets.HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Sync repository to the server
+        run: |
+          rsync -avz --delete \
+            --exclude='.git' \
+            --exclude='.env' \
+            --exclude='.env.*' \
+            --exclude='node_modules' \
+            --exclude='.next' \
+            --exclude='backend/.venv' \
+            --exclude='backend/uploads' \
+            --exclude='*.log' \
+            --exclude='.cursor' \
+            -e "ssh -p ${{ secrets.PORT }}" \
+            ./ ${{ secrets.USERNAME }}@${{ secrets.HOST }}:~/prismashop/
+
+      - name: Build and restart containers
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          port: ${{ secrets.PORT }}
+          script: |
+            cd ~/prismashop
+            bash deploy/deploy.sh --remote

@@ -51,7 +51,7 @@ def set_session_cookie(
         "value": session_id,
         "httponly": True,
         "samesite": "lax",
-        "secure": False,
+        "secure": settings.SESSION_COOKIE_SECURE,
         "path": "/",
     }
     if remember_me:
@@ -61,7 +61,12 @@ def set_session_cookie(
 
 
 def clear_session_cookie(response: Response) -> None:
-    response.delete_cookie(settings.SESSION_COOKIE_NAME, path="/")
+    response.delete_cookie(
+        settings.SESSION_COOKIE_NAME,
+        path="/",
+        secure=settings.SESSION_COOKIE_SECURE,
+        samesite="lax",
+    )
 
 
 def get_or_create_session(

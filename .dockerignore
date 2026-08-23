@@ -1,0 +1,16 @@
+.git
+.github
+.cursor
+.next
+node_modules
+backend
+**/.env
+**/.env.*
+*.md
+*.log
+.vscode
+deploy
+env.example
+docker-compose.yml
+.dockerignore
+Dockerfile
