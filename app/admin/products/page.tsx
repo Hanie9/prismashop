@@ -150,6 +150,8 @@ export default function AdminProductsPage() {
         .map((s) => ({ label: s.label.trim(), value: s.value.trim() }))
         .filter((s) => s.label && s.value),
       active: form.active,
+      rating: 0,
+      reviewCount: 0,
     };
 
     if (editingId != null) {
