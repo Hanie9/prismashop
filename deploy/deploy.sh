@@ -89,7 +89,7 @@ issue_certificate() {
 remote_deploy() {
   cd "${HOME}/prismashop"
   mkdir -p "${DATA_DIR}/postgres" "${DATA_DIR}/uploads" "${SSL_HOST_DIR}"
-  chmod 777 "${DATA_DIR}/postgres" "${DATA_DIR}/uploads"
+  chmod 777 "${DATA_DIR}/uploads" || true
 
   if [[ ! -f .env ]]; then
     log "creating .env"
