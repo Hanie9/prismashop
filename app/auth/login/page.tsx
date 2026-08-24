@@ -9,6 +9,7 @@ import { useAuth } from "../../components/SessionProvider";
 import { setAdminSession } from "../../lib/admin-auth";
 import { isValidEmailOrMobile } from "../../lib/validation";
 
+
 export default function LoginPage() {
   const router = useRouter();
   const { refresh } = useAuth();
@@ -22,6 +23,7 @@ export default function LoginPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [justRegistered, setJustRegistered] = useState(false);
   const [cancelHref, setCancelHref] = useState("/");
+  const [signupHref, setSignupHref] = useState("/auth/signup");
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -31,7 +33,7 @@ export default function LoginPage() {
     const next = params.get("next");
 
     // "بازگشت" must cancel login — never go to `next` (that can require auth and loop).
-    if (next === "/checkout" || next?.startsWith("/checkout?")) {
+    if (next === "/cart" || next === "/checkout" || next?.startsWith("/checkout?")) {
       setCancelHref("/cart");
     } else if (next?.startsWith("/admin")) {
       setCancelHref("/");
@@ -47,6 +49,7 @@ export default function LoginPage() {
       remember: Boolean(remembered) && !emailFromQuery,
     }));
     setJustRegistered(registered);
+    setSignupHref(next ? `/auth/signup?next=${encodeURIComponent(next)}` : "/auth/signup");
   }, []);
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
@@ -77,13 +80,16 @@ export default function LoginPage() {
       await refresh();
       window.dispatchEvent(new Event("prismashop-auth-change"));
 
-      const next = new URLSearchParams(window.location.search).get("next");
+      const rawNext = new URLSearchParams(window.location.search).get("next");
+      const next =
+        rawNext === "/checkout" || rawNext?.startsWith("/checkout?")
+          ? "/cart"
+          : rawNext;
       if (session.role === "admin") {
-        router.replace(next?.startsWith("/admin") ? next : "/admin");
+        router.replace(next && next.startsWith("/") ? next : "/admin");
       } else {
         router.push(next && next.startsWith("/") ? next : "/");
       }
-      router.refresh();
     } catch (err) {
       setError(
         err instanceof Error
@@ -152,7 +158,7 @@ export default function LoginPage() {
                 <h1 className="mb-2 text-xl sm:text-2xl font-black text-white">ورود به حساب</h1>
                 <p className="text-sm text-[#f0d3aa]">
                   حساب ندارید؟{" "}
-                  <Link href="/auth/signup" className="font-bold text-white hover:text-[#f6dfbc] hover:underline">
+                  <Link href={signupHref} className="font-bold text-white hover:text-[#f6dfbc] hover:underline">
                     ثبت‌نام کنید
                   </Link>
                 </p>

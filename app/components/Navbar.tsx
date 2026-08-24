@@ -257,8 +257,7 @@ export default function Navbar() {
     await logout();
     setMenuOpen(false);
     setLogoutDialogOpen(false);
-    router.push("/");
-    router.refresh();
+    router.replace("/");
   };
 
   const session = isLoggedIn;

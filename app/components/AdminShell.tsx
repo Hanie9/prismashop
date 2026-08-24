@@ -120,16 +120,16 @@ export default function AdminShell({ children }: { children: ReactNode }) {
     router.replace("/admin/login");
   };
 
+  if (!authReady || (!ready && pathname !== "/admin/login")) {
+    return <PageLoader overlay label="در حال بارگذاری پنل..." />;
+  }
+
   if (pathname === "/admin/login") {
     return <>{children}</>;
   }
 
-  if (!ready || !shopHydrated) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-[#f4efe6]">
-        <PageLoader label="در حال بارگذاری پنل..." />
-      </div>
-    );
+  if (!shopHydrated) {
+    return <PageLoader overlay label="در حال بارگذاری پنل..." />;
   }
 
   const pendingOrders = orders.filter((o) => o.status === "pending" || o.status === "processing").length;

@@ -93,7 +93,7 @@ function fromApiItems(items: { productId: number; qty: number }[]): CartItem[] {
 }
 
 export function CartProvider({ children }: { children: ReactNode }) {
-  const { ready, isCustomer, customer, isAdmin, admin } = useAuth();
+  const { ready, isCustomer, customer, isAdmin } = useAuth();
   const { getStock, hydrated: shopHydrated } = useShop();
   const [items, setItems] = useState<CartItem[]>([]);
   const [hydrated, setHydrated] = useState(false);
@@ -103,14 +103,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const resolveOwner = useCallback(() => {
     if (isCustomer && customer?.id) return `user:${customer.id}`;
-    if (isAdmin && admin?.id) return `admin:${admin.id}`;
+    if (isAdmin) return "admin";
     return "guest";
-  }, [isCustomer, customer?.id, isAdmin, admin?.id]);
+  }, [isCustomer, customer?.id, isAdmin]);
 
-  const ownerReady =
-    ready &&
-    (!isCustomer || customer !== null) &&
-    (!isAdmin || admin !== null);
+  const ownerReady = ready && (!isCustomer || customer !== null);
 
   // Load the cart that belongs to the current identity
   useEffect(() => {
@@ -140,8 +137,14 @@ export function CartProvider({ children }: { children: ReactNode }) {
           setItems(loaded);
           setOwner(nextOwner);
         } else {
-          const loaded = readLocalCart(localKey);
+          const stored = readLocalCart(localKey);
+          const loaded =
+            nextOwner !== "guest" && guestItems.length
+              ? mergeItems(stored, guestItems)
+              : stored;
           if (cancelled) return;
+          writeLocalCart(localKey, loaded);
+          if (nextOwner !== "guest" && guestItems.length) writeLocalCart(GUEST_KEY, []);
           skipNextPersist.current = true;
           persistRemoteRef.current = false;
           setItems(loaded);
@@ -150,7 +153,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       } catch {
         if (cancelled) return;
         const fallback =
-          nextOwner.startsWith("user:") && guestItems.length
+          nextOwner !== "guest" && guestItems.length
             ? mergeItems(readLocalCart(localKey), guestItems)
             : readLocalCart(localKey);
         skipNextPersist.current = true;

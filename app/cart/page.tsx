@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import PageLoader from "../components/PageLoader";
 import PriceText from "../components/PriceText";
 import { useAuth } from "../components/SessionProvider";
 import { useCart } from "../components/CartProvider";
@@ -81,13 +82,85 @@ function ClearCartDialog({
   );
 }
 
+function LoginPromptDialog({
+  open,
+  onCancel,
+  onConfirm,
+}: {
+  open: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  useEffect(() => {
+    if (!open) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onCancel();
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [open, onCancel]);
+
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4">
+      <button
+        type="button"
+        aria-label="بستن"
+        className="absolute inset-0 bg-[#2e1a08]/45 backdrop-blur-[2px]"
+        onClick={onCancel}
+      />
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="login-prompt-dialog-title"
+        className="relative w-full max-w-md rounded-[24px] border border-[#ead7bb] bg-white p-5 shadow-[0_24px_60px_rgba(89,48,10,0.22)] sm:rounded-[28px] sm:p-6"
+      >
+        <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-[#fff4e5] text-[#8a5419]">
+          <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+            <path d="M10 17l5-5-5-5" />
+            <path d="M15 12H3" />
+          </svg>
+        </div>
+        <h2 id="login-prompt-dialog-title" className="mb-2 text-lg font-black text-[#3d2410]">
+          ورود برای ادامه سفارش
+        </h2>
+        <p className="mb-6 text-sm leading-7 text-[#6d4014]">
+          برای تکمیل سفارش ابتدا باید وارد حساب کاربری شوید یا ثبت نام کنید. می‌خواهید به
+          صفحه ورود بروید؟
+        </p>
+        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:gap-3">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="flex-1 rounded-2xl border border-[#ead7bb] bg-[#fffaf5] py-3 text-sm font-medium text-[#4e2e0e] transition-colors hover:border-[#d4a96a] hover:text-[#8a5419]"
+          >
+            فعلا نه
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            className="flex-1 rounded-2xl bg-[#8a5419] py-3 text-sm font-bold text-white transition-colors hover:bg-[#6d4014]"
+          >
+            رفتن به ورود
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function CartPage() {
   const router = useRouter();
   const { isLoggedIn, ready } = useAuth();
-  const { items, updateQty, removeItem, clearCart, getAvailableStock } = useCart();
+  const { items, hydrated: cartHydrated, updateQty, removeItem, clearCart, getAvailableStock } = useCart();
   const { getProduct, refreshShop } = useShop();
   const [stockMsg, setStockMsg] = useState("");
   const [clearDialogOpen, setClearDialogOpen] = useState(false);
+  const [loginPromptOpen, setLoginPromptOpen] = useState(false);
 
   const rows = useMemo(
     () =>
@@ -102,7 +175,7 @@ export default function CartPage() {
   const goCheckout = async () => {
     if (!ready) return;
     if (!isLoggedIn) {
-      router.push(`/auth/login?next=${encodeURIComponent("/checkout")}`);
+      setLoginPromptOpen(true);
       return;
     }
     try {
@@ -129,7 +202,9 @@ export default function CartPage() {
     <div className="min-h-screen bg-[#faf6ee]">
       <div className="max-w-7xl mx-auto px-4 lg:px-6 xl:px-4 py-8 sm:py-12">
         <h1 className="mb-6 text-2xl font-black text-[#2e1a08] sm:mb-8 sm:text-3xl">سبد خرید</h1>
-        {rows.length === 0 ? (
+        {!cartHydrated ? (
+          <PageLoader fullScreen={false} />
+        ) : rows.length === 0 ? (
           <div className="relative overflow-hidden rounded-[28px] border border-[#e8cfa8] bg-gradient-to-b from-white via-[#fffdf9] to-[#fff8ef] shadow-[0_20px_50px_rgba(89,48,10,0.08)] sm:rounded-[36px]">
             <div
               className="pointer-events-none absolute inset-0 opacity-[0.35]"
@@ -367,6 +442,14 @@ export default function CartPage() {
         onConfirm={() => {
           clearCart();
           setClearDialogOpen(false);
+        }}
+      />
+      <LoginPromptDialog
+        open={loginPromptOpen}
+        onCancel={() => setLoginPromptOpen(false)}
+        onConfirm={() => {
+          setLoginPromptOpen(false);
+          router.push(`/auth/login?next=${encodeURIComponent("/cart")}`);
         }}
       />
     </div>

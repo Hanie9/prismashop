@@ -91,7 +91,7 @@ export default function AccountProfilePage() {
   useEffect(() => {
     if (!ready) return;
     if (!isLoggedIn) {
-      router.replace(`/auth/login?next=${encodeURIComponent("/account/profile")}`);
+      router.replace("/");
       return;
     }
     if (!isCustomer) {

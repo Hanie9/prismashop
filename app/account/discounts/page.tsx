@@ -27,7 +27,7 @@ export default function AccountDiscountsPage() {
   useEffect(() => {
     if (!ready) return;
     if (!isLoggedIn) {
-      router.replace(`/auth/login?next=${encodeURIComponent("/account/discounts")}`);
+      router.replace("/");
       return;
     }
     let cancelled = false;

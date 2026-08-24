@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "../components/SessionProvider";
 import { useCart } from "../components/CartProvider";
+import PageLoader from "../components/PageLoader";
 import PriceText from "../components/PriceText";
 import SearchableSelect from "../components/SearchableSelect";
 import { useShop } from "../components/ShopProvider";
@@ -23,6 +24,8 @@ type CheckoutForm = {
   notes: string;
 };
 
+const FORM_STORAGE_KEY = "checkout_form_draft";
+
 const initialForm: CheckoutForm = {
   firstName: "",
   lastName: "",
@@ -34,12 +37,20 @@ const initialForm: CheckoutForm = {
   notes: "",
 };
 
+function loadFormDraft(): CheckoutForm {
+  try {
+    const raw = sessionStorage.getItem(FORM_STORAGE_KEY);
+    if (raw) return { ...initialForm, ...JSON.parse(raw) };
+  } catch {}
+  return initialForm;
+}
+
 export default function CheckoutPage() {
   const router = useRouter();
   const { ready, isLoggedIn, customer, admin, refresh } = useAuth();
-  const { items, clearCart, getAvailableStock } = useCart();
+  const { items, hydrated: cartHydrated, clearCart, getAvailableStock } = useCart();
   const { getProduct, placeOrder, refreshShop } = useShop();
-  const [form, setForm] = useState(initialForm);
+  const [form, setForm] = useState<CheckoutForm>(loadFormDraft);
   const [errors, setErrors] = useState<Partial<Record<keyof CheckoutForm, string>>>({});
   const [trackingCode, setTrackingCode] = useState("");
   const [submittedName, setSubmittedName] = useState("");
@@ -58,7 +69,7 @@ export default function CheckoutPage() {
   useEffect(() => {
     if (!ready) return;
     if (!isLoggedIn) {
-      router.replace(`/auth/login?next=${encodeURIComponent("/checkout")}`);
+      router.replace("/");
     }
   }, [ready, isLoggedIn, router]);
 
@@ -69,26 +80,34 @@ export default function CheckoutPage() {
     document.body.scrollTop = 0;
   }, [trackingCode]);
 
+  // Persist form to sessionStorage on every change
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(FORM_STORAGE_KEY, JSON.stringify(form));
+    } catch {}
+  }, [form]);
+
+  // Pre-fill from profile only when the draft is still empty (user hasn't typed anything)
   useEffect(() => {
     if (profileFilled.current) return;
     if (customer) {
       profileFilled.current = true;
       setForm((f) => ({
-        ...f,
-        firstName: customer.firstName || "",
-        lastName: customer.lastName || "",
-        phone: customer.mobile || "",
-        province: customer.province || "",
-        city: customer.city || "",
-        address: customer.address || "",
-        postalCode: customer.postalCode || "",
+        firstName: f.firstName || customer.firstName || "",
+        lastName: f.lastName || customer.lastName || "",
+        phone: f.phone || customer.mobile || "",
+        province: f.province || customer.province || "",
+        city: f.city || customer.city || "",
+        address: f.address || customer.address || "",
+        postalCode: f.postalCode || customer.postalCode || "",
+        notes: f.notes,
       }));
     } else if (admin) {
       profileFilled.current = true;
       setForm((f) => ({
         ...f,
-        firstName: admin.firstName || "مدیر",
-        lastName: admin.lastName || "",
+        firstName: f.firstName || admin.firstName || "مدیر",
+        lastName: f.lastName || admin.lastName || "",
       }));
     }
   }, [customer, admin]);
@@ -259,6 +278,7 @@ export default function CheckoutPage() {
       clearCart();
       void refresh();
       clearCoupon();
+      try { sessionStorage.removeItem(FORM_STORAGE_KEY); } catch {}
       window.scrollTo({ top: 0, left: 0, behavior: "auto" });
     } catch (err) {
       setStockError(
@@ -322,6 +342,10 @@ export default function CheckoutPage() {
         </div>
       </div>
     );
+  }
+
+  if (!cartHydrated) {
+    return <PageLoader />;
   }
 
   if (rows.length === 0) {

@@ -28,7 +28,7 @@ export default function MyOrdersPage() {
   useEffect(() => {
     if (!ready) return;
     if (!isLoggedIn) {
-      router.replace(`/auth/login?next=${encodeURIComponent("/account/orders")}`);
+      router.replace("/");
       return;
     }
     if (!isCustomer) {

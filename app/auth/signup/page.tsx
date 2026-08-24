@@ -121,8 +121,13 @@ export default function SignupPage() {
       setStoredSessionId(session.sessionId);
       await refresh();
       setSuccess("حساب شما با موفقیت ساخته شد. در حال انتقال...");
+      const rawNext = new URLSearchParams(window.location.search).get("next");
+      const next =
+        rawNext === "/checkout" || rawNext?.startsWith("/checkout?")
+          ? "/cart"
+          : rawNext;
       window.setTimeout(() => {
-        router.push("/");
+        router.push(next && next.startsWith("/") ? next : "/");
       }, 700);
     } catch (err) {
       setError(
