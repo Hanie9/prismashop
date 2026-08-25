@@ -25,9 +25,9 @@ from app.api.routes import (
     wishlist,
 )
 from app.core.config import get_settings
-from app.core.database import Base, SessionLocal, engine
+from app.core.database import SessionLocal
+from app.core.schema import ensure_schema
 from app.services.sessions import cleanup_expired_sessions
-from sqlalchemy import text
 
 
 FIELD_LABELS = {
@@ -89,6 +89,7 @@ def _session_cleaner_loop() -> None:
 
 def _seed_blog_posts_if_empty() -> None:
     from sqlalchemy import select
+    from sqlalchemy.exc import IntegrityError
 
     from app.models.blog_post import BlogPost
     from app.seed.blog_data import SEED_BLOG_POSTS
@@ -96,57 +97,12 @@ def _seed_blog_posts_if_empty() -> None:
     with SessionLocal() as db:
         if db.scalar(select(BlogPost.id).limit(1)):
             return
-        for item in SEED_BLOG_POSTS:
-            db.add(BlogPost(**item))
-        db.commit()
-
-
-def _ensure_contact_message_columns() -> None:
-    """Add reply/user columns on existing contact_messages tables."""
-    stmts = [
-        "ALTER TABLE contact_messages ADD COLUMN IF NOT EXISTS user_id INTEGER",
-        "ALTER TABLE contact_messages ADD COLUMN IF NOT EXISTS reply TEXT",
-        "ALTER TABLE contact_messages ADD COLUMN IF NOT EXISTS replied_at TIMESTAMPTZ",
-    ]
-    with engine.begin() as conn:
-        for stmt in stmts:
-            conn.execute(text(stmt))
-
-
-def _ensure_user_auth_columns() -> None:
-    """Allow OTP-only customers (nullable email/password)."""
-    stmts = [
-        "ALTER TABLE users ALTER COLUMN email DROP NOT NULL",
-        "ALTER TABLE users ALTER COLUMN password_hash DROP NOT NULL",
-    ]
-    with engine.begin() as conn:
-        for stmt in stmts:
-            try:
-                conn.execute(text(stmt))
-            except Exception:
-                pass
-
-
-def _ensure_admin_auth_columns() -> None:
-    stmts = [
-        "ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS mobile VARCHAR(11)",
-        "ALTER TABLE admin_users ALTER COLUMN password_hash DROP NOT NULL",
-    ]
-    with engine.begin() as conn:
-        for stmt in stmts:
-            try:
-                conn.execute(text(stmt))
-            except Exception:
-                pass
         try:
-            conn.execute(
-                text(
-                    "CREATE UNIQUE INDEX IF NOT EXISTS ix_admin_users_mobile "
-                    "ON admin_users (mobile) WHERE mobile IS NOT NULL"
-                )
-            )
-        except Exception:
-            pass
+            for item in SEED_BLOG_POSTS:
+                db.add(BlogPost(**item))
+            db.commit()
+        except IntegrityError:
+            db.rollback()
 
 
 def _ensure_admin_mobile() -> None:
@@ -199,28 +155,10 @@ def _ensure_admin_mobile() -> None:
         db.commit()
 
 
-def _ensure_product_content_columns() -> None:
-    """Add product content JSON columns on existing DBs (create_all won't alter)."""
-    stmts = [
-        "ALTER TABLE products ADD COLUMN IF NOT EXISTS detail_paragraphs JSONB DEFAULT '[]'::jsonb",
-        "ALTER TABLE products ADD COLUMN IF NOT EXISTS highlights JSONB DEFAULT '[]'::jsonb",
-        "ALTER TABLE products ADD COLUMN IF NOT EXISTS specs JSONB DEFAULT '[]'::jsonb",
-    ]
-    with engine.begin() as conn:
-        for stmt in stmts:
-            conn.execute(text(stmt))
-
-
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     settings = get_settings()
-    import app.models  # noqa: F401 — register all SQLAlchemy models
-
-    Base.metadata.create_all(bind=engine)
-    _ensure_product_content_columns()
-    _ensure_user_auth_columns()
-    _ensure_admin_auth_columns()
-    _ensure_contact_message_columns()
+    ensure_schema()
     _ensure_admin_mobile()
     _seed_blog_posts_if_empty()
     try:

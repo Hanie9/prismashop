@@ -3,7 +3,8 @@
 from sqlalchemy import select, text
 
 from app.core.config import get_settings
-from app.core.database import Base, SessionLocal, engine
+from app.core.database import SessionLocal
+from app.core.schema import ensure_schema
 from app.core.security import hash_password
 from app.models import AdminUser, Category, Coupon, Product
 from app.seed.data import SEED_CATEGORIES, SEED_COUPONS, build_seed_products
@@ -11,7 +12,7 @@ from app.seed.data import SEED_CATEGORIES, SEED_COUPONS, build_seed_products
 
 def seed(*, force: bool = False) -> None:
     settings = get_settings()
-    Base.metadata.create_all(bind=engine)
+    ensure_schema()
 
     with SessionLocal() as db:
         has_products = db.scalar(select(Product.id).limit(1))
