@@ -3,102 +3,151 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { type FormEvent, useEffect, useState } from "react";
-import { api, getRememberedLogin, setRememberedLogin, setSessionPersist, setStoredSessionId } from "../../lib/api";
+import { type FormEvent, useEffect, useRef, useState } from "react";
+import OtpCodeInput from "../../components/OtpCodeInput";
 import { useAuth } from "../../components/SessionProvider";
 import { setAdminSession } from "../../lib/admin-auth";
-import { isValidEmailOrMobile } from "../../lib/validation";
+import {
+  api,
+  getRememberedLogin,
+  setRememberedLogin,
+  setSessionPersist,
+  setStoredSessionId,
+} from "../../lib/api";
+import { isValidIranMobile, normalizeIranMobileInput, onlyDigits } from "../../lib/validation";
 
+function normalizeMobile(value: string) {
+  return normalizeIranMobileInput(value);
+}
 
 export default function LoginPage() {
   const router = useRouter();
   const { refresh } = useAuth();
-  const [showPass, setShowPass] = useState(false);
+  const [phase, setPhase] = useState<"mobile" | "otp">("mobile");
   const [form, setForm] = useState({
-    email: "",
-    password: "",
+    mobile: "",
+    code: "",
     remember: false,
   });
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [justRegistered, setJustRegistered] = useState(false);
+  const [cooldown, setCooldown] = useState(0);
   const [cancelHref, setCancelHref] = useState("/");
   const [signupHref, setSignupHref] = useState("/auth/signup");
+  const [devCode, setDevCode] = useState<string | null>(null);
+  const verifyingRef = useRef(false);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const emailFromQuery = params.get("email") ?? "";
-    const registered = params.get("registered") === "1";
     const remembered = getRememberedLogin();
     const next = params.get("next");
 
-    // "بازگشت" must cancel login — never go to `next` (that can require auth and loop).
     if (next === "/cart" || next === "/checkout" || next?.startsWith("/checkout?")) {
       setCancelHref("/cart");
-    } else if (next?.startsWith("/admin")) {
-      setCancelHref("/");
-    } else if (next?.startsWith("/account")) {
-      setCancelHref("/");
     } else {
       setCancelHref("/");
     }
 
     setForm((current) => ({
       ...current,
-      email: emailFromQuery || remembered || current.email,
-      remember: Boolean(remembered) && !emailFromQuery,
+      mobile: remembered && isValidIranMobile(remembered) ? remembered : current.mobile,
+      remember: Boolean(remembered),
     }));
-    setJustRegistered(registered);
     setSignupHref(next ? `/auth/signup?next=${encodeURIComponent(next)}` : "/auth/signup");
   }, []);
 
-  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setError("");
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const t = window.setTimeout(() => setCooldown((c) => c - 1), 1000);
+    return () => window.clearTimeout(t);
+  }, [cooldown]);
 
-    if (!form.email.trim() || !form.password.trim()) {
-      setError("لطفاً ایمیل/موبایل و رمز عبور را وارد کنید.");
+  const requestCode = async () => {
+    setError("");
+    setDevCode(null);
+    const mobile = form.mobile.trim();
+    if (!mobile) {
+      setError("شماره موبایل را وارد کنید.");
       return;
     }
-
-    if (!isValidEmailOrMobile(form.email)) {
-      setError("ایمیل یا شماره موبایل معتبر وارد کنید (مثال: 09123456789).");
+    if (!isValidIranMobile(mobile)) {
+      setError("شماره باید ۱۱ رقم و با ۰۹ شروع شود.");
       return;
     }
 
     setIsSubmitting(true);
     try {
-      const identifier = form.email.trim();
+      const res = await api.requestOtp(normalizeMobile(mobile), "login");
+      setForm((prev) => ({ ...prev, code: "" }));
+      setPhase("otp");
+      setCooldown(60);
+      if (res.devCode) setDevCode(res.devCode);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "ارسال کد ناموفق بود.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const verifyAndLogin = async (codeOverride?: string) => {
+    if (verifyingRef.current) return;
+    const code = onlyDigits(codeOverride ?? form.code);
+    setError("");
+    if (code.length !== 6) {
+      setError("کد ۶ رقمی را کامل وارد کنید.");
+      return;
+    }
+
+    verifyingRef.current = true;
+    setIsSubmitting(true);
+    try {
       setSessionPersist(form.remember);
-      const session = await api.login(identifier, form.password, form.remember);
+      const session = await api.verifyOtpLogin(
+        normalizeMobile(form.mobile),
+        onlyDigits(code),
+        form.remember,
+      );
       setStoredSessionId(session.sessionId);
-      if (form.remember) setRememberedLogin(identifier);
+      if (form.remember) setRememberedLogin(normalizeMobile(form.mobile));
       else setRememberedLogin(null);
+
       if (session.role === "admin") {
         setAdminSession();
       }
-      await refresh();
+
+      try {
+        await refresh();
+      } catch {
+        /* session already stored */
+      }
       window.dispatchEvent(new Event("prismashop-auth-change"));
 
       const rawNext = new URLSearchParams(window.location.search).get("next");
+      if (session.role === "admin") {
+        const adminNext =
+          rawNext && rawNext.startsWith("/admin") ? rawNext : "/admin";
+        router.replace(adminNext);
+        return;
+      }
+
       const next =
         rawNext === "/checkout" || rawNext?.startsWith("/checkout?")
           ? "/cart"
           : rawNext;
-      if (session.role === "admin") {
-        router.replace(next && next.startsWith("/") ? next : "/admin");
-      } else {
-        router.push(next && next.startsWith("/") ? next : "/");
-      }
+      router.push(next && next.startsWith("/") ? next : "/");
     } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "ورود انجام نشد. لطفاً دوباره تلاش کنید.",
-      );
+      setError(err instanceof Error ? err.message : "ورود انجام نشد.");
+      setForm((prev) => ({ ...prev, code: "" }));
     } finally {
+      verifyingRef.current = false;
       setIsSubmitting(false);
     }
+  };
+
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (phase === "mobile") await requestCode();
+    else await verifyAndLogin();
   };
 
   return (
@@ -143,116 +192,179 @@ export default function LoginPage() {
                 ورود امن و سریع
               </span>
               <h2 className="mb-4 text-3xl xl:text-4xl 2xl:text-5xl font-black leading-[1.35] text-white">
-                با یک تجربه
+                ورود با
                 <br />
-                مدرن وارد شوید
+                کد تأیید موبایل
               </h2>
               <p className="max-w-md text-sm leading-8 text-[#efcea3] xl:text-base">
-                حساب کاربری خود را باز کنید، سفارش‌ها را پیگیری کنید و سریع‌تر به محصولات چوبی و کالیگرافی مورد علاقه‌تان برسید.
+                فقط با شماره موبایل وارد شوید؛ بدون ایمیل و رمز عبور.
               </p>
             </div>
 
             <div className="w-full max-w-md justify-self-center lg:justify-self-end">
               <div className="rounded-[30px] border border-white/15 bg-white/12 p-5 sm:p-7 shadow-[0_24px_80px_rgba(0,0,0,0.32)] backdrop-blur-xl md:p-8">
-                <div className="mb-7 text-center">
-                <h1 className="mb-2 text-xl sm:text-2xl font-black text-white">ورود به حساب</h1>
-                <p className="text-sm text-[#f0d3aa]">
-                  حساب ندارید؟{" "}
-                  <Link href={signupHref} className="font-bold text-white hover:text-[#f6dfbc] hover:underline">
-                    ثبت‌نام کنید
-                  </Link>
-                </p>
-              </div>
-
-              <form className="space-y-5" onSubmit={handleSubmit}>
-                {justRegistered && (
-                  <div className="rounded-2xl border border-emerald-300/40 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-50">
-                    ثبت‌نام با موفقیت انجام شد. حالا با اطلاعات خود وارد شوید.
-                  </div>
-                )}
-                <div>
-                  <label htmlFor="login-email" className="mb-2 block text-sm font-medium text-[#f7ead3]">
-                    ایمیل یا شماره موبایل
-                  </label>
-                  <div className="relative">
-                    <input
-                      id="login-email"
-                      type="text"
-                      value={form.email}
-                      onChange={(e) => setForm({ ...form, email: e.target.value })}
-                      placeholder="example@email.com"
-                      className="h-12 w-full rounded-2xl border border-white/15 bg-white/14 pr-11 pl-4 text-sm text-white placeholder:text-[#f0d3aa]/60 focus:border-[#f1d5ad]/60 focus:outline-none focus:ring-4 focus:ring-[#d4a96a]/15"
-                    />
-                    <svg className="absolute right-3.5 top-3.5 text-[#f0d3aa]" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                      <path d="M3 8l7.89 5.26a2 2 0 0 0 2.22 0L21 8M5 19h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2z" />
-                    </svg>
-                  </div>
+                <div className="mb-6 text-center">
+                  <h1 className="mb-2 text-xl sm:text-2xl font-black text-white">ورود به حساب</h1>
+                  <p className="text-sm text-[#f0d3aa]">
+                    حساب ندارید؟{" "}
+                    <Link href={signupHref} className="font-bold text-white hover:text-[#f6dfbc] hover:underline">
+                      ثبت‌نام کنید
+                    </Link>
+                  </p>
                 </div>
 
-                <div>
-                  <label htmlFor="login-password" className="mb-2 block text-sm font-medium text-[#f7ead3]">
-                    رمز عبور
-                  </label>
-                  <div className="relative">
-                    <input
-                      id="login-password"
-                      type={showPass ? "text" : "password"}
-                      value={form.password}
-                      onChange={(e) => setForm({ ...form, password: e.target.value })}
-                      placeholder="رمز عبور خود را وارد کنید"
-                      className="h-12 w-full rounded-2xl border border-white/15 bg-white/14 pr-11 pl-11 text-sm text-white placeholder:text-[#f0d3aa]/60 focus:border-[#f1d5ad]/60 focus:outline-none focus:ring-4 focus:ring-[#d4a96a]/15"
-                    />
-                    <svg className="absolute right-3.5 top-3.5 text-[#f0d3aa]" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                      <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-                      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-                    </svg>
-                    <button
-                      type="button"
-                      onClick={() => setShowPass(!showPass)}
-                      className="absolute left-3.5 top-3.5 text-[#f0d3aa] hover:text-white"
-                      aria-label={showPass ? "مخفی کردن رمز" : "نمایش رمز"}
-                    >
-                      <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                        {showPass ? (
-                          <>
-                            <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
-                            <line x1="1" y1="1" x2="23" y2="23" />
-                          </>
-                        ) : (
-                          <>
-                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                            <circle cx="12" cy="12" r="3" />
-                          </>
-                        )}
-                      </svg>
-                    </button>
-                  </div>
+                <div className="mb-6 flex items-center justify-center gap-2 text-xs">
+                  <span
+                    className={`rounded-full px-3 py-1 font-medium ${
+                      phase === "mobile"
+                        ? "bg-[#f3ddbb] text-[#3c220c]"
+                        : "bg-white/10 text-[#f0d3aa]"
+                    }`}
+                  >
+                    ۱. شماره
+                  </span>
+                  <span className="h-px w-6 bg-white/20" />
+                  <span
+                    className={`rounded-full px-3 py-1 font-medium ${
+                      phase === "otp"
+                        ? "bg-[#f3ddbb] text-[#3c220c]"
+                        : "bg-white/10 text-[#f0d3aa]"
+                    }`}
+                  >
+                    ۲. کد تأیید
+                  </span>
                 </div>
 
-                <div className="flex items-center">
-                  <label className="flex cursor-pointer items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={form.remember}
-                      onChange={(e) => setForm({ ...form, remember: e.target.checked })}
-                      className="h-4 w-4 rounded accent-[#6d4014]"
-                    />
-                    <span className="text-sm text-[#f7ead3]">مرا به خاطر بسپار</span>
-                  </label>
-                </div>
+                <form className="space-y-5" onSubmit={handleSubmit}>
+                  {phase === "mobile" ? (
+                    <>
+                      <div>
+                        <label htmlFor="login-mobile" className="mb-2 block text-sm font-medium text-[#f7ead3]">
+                          شماره موبایل
+                        </label>
+                        <div className="relative">
+                          <input
+                            id="login-mobile"
+                            type="tel"
+                            inputMode="numeric"
+                            autoComplete="tel"
+                            value={form.mobile}
+                            onChange={(e) => {
+                              setForm({ ...form, mobile: normalizeMobile(e.target.value) });
+                              setError("");
+                            }}
+                            placeholder="09123456789"
+                            className="h-12 w-full rounded-2xl border border-white/15 bg-white/14 px-4 pr-11 text-sm text-white placeholder:text-[#f0d3aa]/60 focus:border-[#f1d5ad]/60 focus:outline-none focus:ring-4 focus:ring-[#d4a96a]/15"
+                            dir="ltr"
+                          />
+                          <svg
+                            className="pointer-events-none absolute right-3.5 top-3.5 text-[#f0d3aa]"
+                            width="18"
+                            height="18"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                            strokeWidth={1.5}
+                          >
+                            <path d="M3 5a2 2 0 0 1 2-2h3.28a1 1 0 0 1 .948.684l1.498 4.493a1 1 0 0 1-.502 1.21l-2.257 1.13a11.042 11.042 0 0 0 5.516 5.516l1.13-2.257a1 1 0 0 1 1.21-.502l4.493 1.498a1 1 0 0 1 .684.949V19a2 2 0 0 1-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                          </svg>
+                        </div>
+                      </div>
 
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="w-full rounded-2xl bg-[#f3ddbb] py-3.5 text-base font-bold text-[#3c220c] shadow-[0_10px_24px_rgba(15,10,5,0.25)] transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {isSubmitting ? "در حال ورود..." : "ورود به حساب"}
-                </button>
-                {error && (
-                  <div className="rounded-2xl border border-red-300/50 bg-red-500/10 px-4 py-3 text-sm text-red-100">
-                    {error}
-                  </div>
-                )}
+                      <label className="flex cursor-pointer items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={form.remember}
+                          onChange={(e) => setForm({ ...form, remember: e.target.checked })}
+                          className="h-4 w-4 rounded accent-[#6d4014]"
+                        />
+                        <span className="text-sm text-[#f7ead3]">مرا به خاطر بسپار</span>
+                      </label>
+
+                      <button
+                        type="submit"
+                        disabled={isSubmitting || form.mobile.length < 11}
+                        className="w-full rounded-2xl bg-[#f3ddbb] py-3.5 text-base font-bold text-[#3c220c] shadow-[0_10px_24px_rgba(15,10,5,0.25)] transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {isSubmitting ? "در حال ارسال..." : "دریافت کد تأیید"}
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <div className="rounded-2xl border border-white/10 bg-white/8 px-4 py-3 text-center">
+                        <p className="text-xs text-[#f0d3aa]">کد به این شماره ارسال شد</p>
+                        <p className="mt-1 text-base font-bold tracking-wide text-white" dir="ltr">
+                          {form.mobile}
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPhase("mobile");
+                            setForm((prev) => ({ ...prev, code: "" }));
+                            setError("");
+                            setDevCode(null);
+                          }}
+                          className="mt-2 text-xs font-medium text-[#f1d5ad] hover:text-white hover:underline"
+                        >
+                          تغییر شماره
+                        </button>
+                      </div>
+
+                      <div>
+                        <p className="mb-3 text-center text-sm font-medium text-[#f7ead3]">کد ۶ رقمی</p>
+                        <OtpCodeInput
+                          value={form.code}
+                          autoFocus
+                          disabled={isSubmitting}
+                          invalid={Boolean(error)}
+                          onChange={(code) => {
+                            setForm((prev) => ({ ...prev, code }));
+                            setError("");
+                          }}
+                          onComplete={(code) => void verifyAndLogin(code)}
+                        />
+                      </div>
+
+                      {devCode ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setForm((prev) => ({ ...prev, code: devCode }));
+                            void verifyAndLogin(devCode);
+                          }}
+                          className="w-full rounded-xl border border-dashed border-[#d4a96a]/40 bg-[#d4a96a]/10 px-3 py-2.5 text-xs text-[#f0d3aa] transition-colors hover:bg-[#d4a96a]/15"
+                        >
+                          کد تست: <span className="font-bold text-white" dir="ltr">{devCode}</span>
+                          <span className="mr-1 text-[#f1d5ad]">— کلیک برای ورود</span>
+                        </button>
+                      ) : null}
+
+                      <button
+                        type="submit"
+                        disabled={isSubmitting || form.code.length !== 6}
+                        className="w-full rounded-2xl bg-[#f3ddbb] py-3.5 text-base font-bold text-[#3c220c] shadow-[0_10px_24px_rgba(15,10,5,0.25)] transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {isSubmitting ? "در حال ورود..." : "تأیید و ورود"}
+                      </button>
+
+                      <button
+                        type="button"
+                        disabled={cooldown > 0 || isSubmitting}
+                        onClick={() => void requestCode()}
+                        className="w-full text-sm text-[#f0d3aa] transition-colors hover:text-white disabled:opacity-50"
+                      >
+                        {cooldown > 0
+                          ? `ارسال مجدد تا ${cooldown.toLocaleString("fa-IR")} ثانیه دیگر`
+                          : "ارسال مجدد کد"}
+                      </button>
+                    </>
+                  )}
+
+                  {error ? (
+                    <div className="rounded-2xl border border-red-300/50 bg-red-500/10 px-4 py-3 text-center text-sm text-red-100">
+                      {error}
+                    </div>
+                  ) : null}
                 </form>
               </div>
             </div>

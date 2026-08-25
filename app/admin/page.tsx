@@ -29,15 +29,15 @@ export default function AdminDashboardPage() {
         <p className="mt-1 text-sm text-[#6d4014]">نمای کلی فروشگاه پریسما شاپ</p>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
         {stats.map((stat) => (
           <Link
             key={stat.label}
             href={stat.href}
-            className={`rounded-3xl border border-[#ead7bb] ${stat.tone} p-5 transition hover:border-[#d4a96a]`}
+            className={`rounded-2xl border border-[#ead7bb] ${stat.tone} p-3.5 transition hover:border-[#d4a96a] sm:rounded-3xl sm:p-5`}
           >
-            <p className="text-sm text-[#6d4014]">{stat.label}</p>
-            <p className="mt-2 text-3xl font-black text-[#2e1a08]">
+            <p className="text-xs text-[#6d4014] sm:text-sm">{stat.label}</p>
+            <p className="mt-1.5 text-2xl font-black text-[#2e1a08] sm:mt-2 sm:text-3xl">
               {stat.value.toLocaleString("fa-IR")}
             </p>
           </Link>

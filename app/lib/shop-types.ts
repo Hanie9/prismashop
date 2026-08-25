@@ -17,6 +17,7 @@ export type Product = {
   rating: number;
   reviewCount: number;
   isNew?: boolean;
+  isBestseller?: boolean;
   discount?: number;
   stock: number;
   lowStockThreshold: number;

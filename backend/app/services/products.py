@@ -63,6 +63,7 @@ def create_product_from_payload(db: Session, payload: ProductCreate) -> Product:
         rating=0.0,
         review_count=0,
         is_new=payload.is_new,
+        is_bestseller=payload.is_bestseller,
         discount=discount,
         stock=payload.stock,
         low_stock_threshold=payload.low_stock_threshold,
@@ -125,6 +126,7 @@ def update_product_from_payload(
 
     for field in (
         "is_new",
+        "is_bestseller",
         "stock",
         "low_stock_threshold",
         "active",

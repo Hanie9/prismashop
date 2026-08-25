@@ -27,7 +27,9 @@ const FIELD_LABELS: Record<string, string> = {
   address: "آدرس",
   province: "استان",
   city: "شهر",
-  code: "کد تخفیف",
+  code: "کد",
+  otpCode: "کد تأیید",
+  otp_code: "کد تأیید",
   name: "نام",
   categoryId: "دسته‌بندی",
   category_id: "دسته‌بندی",
@@ -209,7 +211,7 @@ export type CustomerProfile = {
   firstName: string;
   lastName: string;
   mobile: string;
-  email: string;
+  email?: string | null;
   province?: string | null;
   city?: string | null;
   address?: string | null;
@@ -220,6 +222,7 @@ export type CustomerProfile = {
 export type AdminProfile = {
   id: number;
   email: string;
+  mobile?: string | null;
   firstName: string;
   lastName: string;
 };
@@ -227,8 +230,32 @@ export type AdminProfile = {
 export const api = {
   ensureSession: () => apiFetch<SessionInfo>("/api/auth/session", { method: "POST" }),
   getSession: () => apiFetch<SessionInfo>("/api/auth/session"),
-  register: (body: Record<string, unknown>) =>
-    apiFetch<SessionInfo>("/api/auth/register", { method: "POST", body }),
+  register: (body: {
+    firstName: string;
+    lastName: string;
+    mobile: string;
+    signupToken: string;
+  }) => apiFetch<SessionInfo>("/api/auth/register", { method: "POST", body }),
+  requestOtp: (mobile: string, purpose: "login" | "signup" | "admin") =>
+    apiFetch<{ message: string; expiresIn: number; devCode?: string | null }>(
+      "/api/auth/otp/request",
+      { method: "POST", body: { mobile, purpose } },
+    ),
+  verifyOtpLogin: (mobile: string, code: string, rememberMe = false) =>
+    apiFetch<SessionInfo>("/api/auth/otp/verify", {
+      method: "POST",
+      body: { mobile, code, purpose: "login", rememberMe },
+    }),
+  verifyOtpAdmin: (mobile: string, code: string, rememberMe = false) =>
+    apiFetch<SessionInfo>("/api/auth/otp/verify", {
+      method: "POST",
+      body: { mobile, code, purpose: "admin", rememberMe },
+    }),
+  verifyOtpSignup: (mobile: string, code: string) =>
+    apiFetch<{ message: string; signupToken: string; mobile: string }>(
+      "/api/auth/otp/verify",
+      { method: "POST", body: { mobile, code, purpose: "signup" } },
+    ),
   login: (emailOrMobile: string, password: string, rememberMe = false) =>
     apiFetch<SessionInfo>("/api/auth/login", {
       method: "POST",
@@ -434,6 +461,35 @@ export const api = {
     }),
   adminDeleteReview: (id: number) =>
     apiFetch<{ message: string }>(`/api/admin/reviews/${id}`, { method: "DELETE" }),
+
+  listBlogPosts: () => apiFetch<BlogPost[]>("/api/blog"),
+  getBlogPost: (slug: string) => apiFetch<BlogPost>(`/api/blog/${slug}`),
+  adminListBlogPosts: () => apiFetch<BlogPost[]>("/api/admin/blog"),
+  adminCreateBlogPost: (body: BlogPostInput) =>
+    apiFetch<BlogPost>("/api/admin/blog", { method: "POST", body }),
+  adminUpdateBlogPost: (id: number, body: Partial<BlogPostInput>) =>
+    apiFetch<BlogPost>(`/api/admin/blog/${id}`, { method: "PATCH", body }),
+  adminDeleteBlogPost: (id: number) =>
+    apiFetch<{ message: string }>(`/api/admin/blog/${id}`, { method: "DELETE" }),
+
+  createContactMessage: (body: ContactMessageInput) =>
+    apiFetch<{ message: string }>("/api/contact", { method: "POST", body }),
+  listMyContactMessages: () =>
+    apiFetch<ContactMessage[]>("/api/contact/mine"),
+  adminListContactMessages: () =>
+    apiFetch<ContactMessage[]>("/api/admin/contact"),
+  adminUpdateContactMessage: (
+    id: number,
+    body: { isRead?: boolean; reply?: string | null },
+  ) =>
+    apiFetch<ContactMessage>(`/api/admin/contact/${id}`, {
+      method: "PATCH",
+      body,
+    }),
+  adminDeleteContactMessage: (id: number) =>
+    apiFetch<{ message: string }>(`/api/admin/contact/${id}`, {
+      method: "DELETE",
+    }),
 };
 
 export type ProductReview = {
@@ -459,4 +515,53 @@ export type FeaturedReview = {
   rating: number;
   avatar: string;
   productName?: string | null;
+};
+
+export type BlogPost = {
+  id: number;
+  slug: string;
+  title: string;
+  excerpt: string;
+  cover: string;
+  category: string;
+  readTimeMinutes: number;
+  content: string[];
+  published: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type BlogPostInput = {
+  slug: string;
+  title: string;
+  excerpt: string;
+  cover: string;
+  category?: string;
+  readTimeMinutes: number;
+  content: string[];
+  published?: boolean;
+};
+
+export type ContactMessage = {
+  id: number;
+  userId?: number | null;
+  firstName: string;
+  lastName: string;
+  mobile: string;
+  email: string;
+  subject: string;
+  message: string;
+  reply?: string | null;
+  repliedAt?: string | null;
+  isRead: boolean;
+  createdAt: string;
+};
+
+export type ContactMessageInput = {
+  firstName: string;
+  lastName: string;
+  mobile: string;
+  email: string;
+  subject: string;
+  message: string;
 };

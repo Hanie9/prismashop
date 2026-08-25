@@ -28,6 +28,7 @@ class Settings(BaseSettings):
 
     ADMIN_EMAIL: str = "admin@prismashop.ir"
     ADMIN_PASSWORD: str = "admin123"
+    ADMIN_MOBILE: str = "09355191020"
 
     CORS_ORIGINS: str = "http://localhost:3000,http://127.0.0.1:3000"
     UPLOAD_DIR: str = "uploads"

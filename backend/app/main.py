@@ -13,8 +13,10 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from app.api.routes import (
     admin,
     auth,
+    blog,
     cart,
     categories,
+    contact,
     coupons,
     orders,
     products,
@@ -40,7 +42,7 @@ FIELD_LABELS = {
     "address": "آدرس",
     "province": "استان",
     "city": "شهر",
-    "code": "کد تخفیف",
+    "code": "کد",
     "name": "نام",
     "category_id": "دسته‌بندی",
     "images": "تصاویر",
@@ -85,6 +87,118 @@ def _session_cleaner_loop() -> None:
         time.sleep(300)
 
 
+def _seed_blog_posts_if_empty() -> None:
+    from sqlalchemy import select
+
+    from app.models.blog_post import BlogPost
+    from app.seed.blog_data import SEED_BLOG_POSTS
+
+    with SessionLocal() as db:
+        if db.scalar(select(BlogPost.id).limit(1)):
+            return
+        for item in SEED_BLOG_POSTS:
+            db.add(BlogPost(**item))
+        db.commit()
+
+
+def _ensure_contact_message_columns() -> None:
+    """Add reply/user columns on existing contact_messages tables."""
+    stmts = [
+        "ALTER TABLE contact_messages ADD COLUMN IF NOT EXISTS user_id INTEGER",
+        "ALTER TABLE contact_messages ADD COLUMN IF NOT EXISTS reply TEXT",
+        "ALTER TABLE contact_messages ADD COLUMN IF NOT EXISTS replied_at TIMESTAMPTZ",
+    ]
+    with engine.begin() as conn:
+        for stmt in stmts:
+            conn.execute(text(stmt))
+
+
+def _ensure_user_auth_columns() -> None:
+    """Allow OTP-only customers (nullable email/password)."""
+    stmts = [
+        "ALTER TABLE users ALTER COLUMN email DROP NOT NULL",
+        "ALTER TABLE users ALTER COLUMN password_hash DROP NOT NULL",
+    ]
+    with engine.begin() as conn:
+        for stmt in stmts:
+            try:
+                conn.execute(text(stmt))
+            except Exception:
+                pass
+
+
+def _ensure_admin_auth_columns() -> None:
+    stmts = [
+        "ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS mobile VARCHAR(11)",
+        "ALTER TABLE admin_users ALTER COLUMN password_hash DROP NOT NULL",
+    ]
+    with engine.begin() as conn:
+        for stmt in stmts:
+            try:
+                conn.execute(text(stmt))
+            except Exception:
+                pass
+        try:
+            conn.execute(
+                text(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS ix_admin_users_mobile "
+                    "ON admin_users (mobile) WHERE mobile IS NOT NULL"
+                )
+            )
+        except Exception:
+            pass
+
+
+def _ensure_admin_mobile() -> None:
+    """Keep configured admin mobile in sync for OTP login."""
+    from sqlalchemy import select
+
+    from app.core.security import hash_password
+    from app.models.admin_user import AdminUser
+    from app.schemas import normalize_iran_mobile
+
+    settings = get_settings()
+    try:
+        mobile = normalize_iran_mobile(settings.ADMIN_MOBILE)
+    except Exception:
+        mobile = "09355191020"
+
+    with SessionLocal() as db:
+        admin = db.scalar(
+            select(AdminUser).where(AdminUser.email == settings.ADMIN_EMAIL.lower())
+        )
+        by_mobile = db.scalar(select(AdminUser).where(AdminUser.mobile == mobile))
+
+        if admin:
+            # Clear mobile from any other admin holding the target number
+            if by_mobile and by_mobile.id != admin.id:
+                by_mobile.mobile = None
+                db.add(by_mobile)
+            admin.mobile = mobile
+            if not admin.password_hash:
+                admin.password_hash = hash_password(settings.ADMIN_PASSWORD)
+            db.add(admin)
+            db.commit()
+            return
+
+        if by_mobile:
+            by_mobile.email = settings.ADMIN_EMAIL.lower()
+            db.add(by_mobile)
+            db.commit()
+            return
+
+        db.add(
+            AdminUser(
+                email=settings.ADMIN_EMAIL.lower(),
+                mobile=mobile,
+                password_hash=hash_password(settings.ADMIN_PASSWORD),
+                first_name="مدیر",
+                last_name="پریسما",
+            )
+        )
+        db.commit()
+
+
 def _ensure_product_content_columns() -> None:
     """Add product content JSON columns on existing DBs (create_all won't alter)."""
     stmts = [
@@ -104,6 +218,11 @@ async def lifespan(_: FastAPI):
 
     Base.metadata.create_all(bind=engine)
     _ensure_product_content_columns()
+    _ensure_user_auth_columns()
+    _ensure_admin_auth_columns()
+    _ensure_contact_message_columns()
+    _ensure_admin_mobile()
+    _seed_blog_posts_if_empty()
     try:
         from app.services.reviews import sync_all_product_ratings
 
@@ -147,6 +266,8 @@ def create_app() -> FastAPI:
         uploads.router,
         admin.router,
         reviews.router,
+        blog.router,
+        contact.router,
     ):
         app.include_router(router, prefix="/api")
 

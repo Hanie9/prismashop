@@ -17,7 +17,7 @@ const emptyForm = {
   discountPercent: "",
   images: [] as string[],
   categoryId: "",
-  isNew: false,
+  isBestseller: false,
   stock: "10",
   lowStockThreshold: "5",
   description: "",
@@ -91,7 +91,7 @@ export default function AdminProductsPage() {
       discountPercent: discount > 0 ? String(discount) : "",
       images: getProductImages(product),
       categoryId: product.categoryId,
-      isNew: Boolean(product.isNew),
+      isBestseller: Boolean(product.isBestseller),
       stock: String(product.stock),
       lowStockThreshold: String(product.lowStockThreshold),
       description: product.description ?? "",
@@ -139,7 +139,7 @@ export default function AdminProductsPage() {
       ...imageFields,
       category: category.name,
       categoryId: category.id,
-      isNew: form.isNew,
+      isBestseller: form.isBestseller,
       discount,
       stock: Math.max(0, Number(form.stock) || 0),
       lowStockThreshold: Math.max(1, Number(form.lowStockThreshold) || 5),
@@ -600,10 +600,10 @@ export default function AdminProductsPage() {
               <label className="flex items-center gap-2 text-sm text-[#4e2e0e]">
                 <input
                   type="checkbox"
-                  checked={form.isNew}
-                  onChange={(e) => setForm({ ...form, isNew: e.target.checked })}
+                  checked={form.isBestseller}
+                  onChange={(e) => setForm({ ...form, isBestseller: e.target.checked })}
                 />
-                محصول جدید
+                پرفروش‌ترین‌ها
               </label>
               <label className="flex items-center gap-2 text-sm text-[#4e2e0e]">
                 <input

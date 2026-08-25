@@ -3,17 +3,17 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useEffect, useRef, useState } from "react";
+import OtpCodeInput from "../../components/OtpCodeInput";
 import { useAuth } from "../../components/SessionProvider";
 import { api, setSessionPersist, setStoredSessionId } from "../../lib/api";
-import { isValidEmail, isValidIranMobile, isValidPassword } from "../../lib/validation";
+import { isValidIranMobile, normalizeIranMobileInput, onlyDigits } from "../../lib/validation";
 
 type FieldErrors = {
   firstName?: string;
   lastName?: string;
   mobile?: string;
-  email?: string;
-  password?: string;
+  code?: string;
 };
 
 const inputBase =
@@ -26,36 +26,35 @@ function FieldError({ message }: { message?: string }) {
   return <p className="mt-1.5 text-xs text-red-200">{message}</p>;
 }
 
+function normalizeMobile(value: string) {
+  return normalizeIranMobileInput(value);
+}
+
 export default function SignupPage() {
   const router = useRouter();
   const { refresh } = useAuth();
-  const [showPass, setShowPass] = useState(false);
   const [step, setStep] = useState(1);
+  const [phase, setPhase] = useState<"mobile" | "otp">("mobile");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  const [signupToken, setSignupToken] = useState("");
+  const [cooldown, setCooldown] = useState(0);
+  const [devCode, setDevCode] = useState<string | null>(null);
+  const verifyingRef = useRef(false);
   const [form, setForm] = useState({
     firstName: "",
     lastName: "",
     mobile: "",
-    email: "",
-    password: "",
+    code: "",
   });
 
-  const strength = (() => {
-    const p = form.password;
-    if (!p) return 0;
-    let s = 0;
-    if (p.length >= 8) s++;
-    if (/[A-Z]/.test(p)) s++;
-    if (/[0-9]/.test(p)) s++;
-    if (/[^A-Za-z0-9]/.test(p)) s++;
-    return s;
-  })();
-
-  const strengthLabel = ["", "ضعیف", "متوسط", "خوب", "عالی"][strength];
-  const strengthColor = ["", "bg-red-400", "bg-yellow-400", "bg-blue-400", "bg-green-400"][strength];
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const t = window.setTimeout(() => setCooldown((c) => c - 1), 1000);
+    return () => window.clearTimeout(t);
+  }, [cooldown]);
 
   const clearFieldError = (key: keyof FieldErrors) => {
     setFieldErrors((prev) => {
@@ -66,68 +65,92 @@ export default function SignupPage() {
     });
   };
 
-  const validateStep1 = (): boolean => {
-    const next: FieldErrors = {};
-    if (!form.firstName.trim()) next.firstName = "نام را وارد کنید.";
-    if (!form.lastName.trim()) next.lastName = "نام خانوادگی را وارد کنید.";
-    if (!form.mobile.trim()) {
-      next.mobile = "شماره موبایل را وارد کنید.";
-    } else if (!isValidIranMobile(form.mobile)) {
-      next.mobile = "شماره موبایل باید ۱۱ رقم و با ۰۹ شروع شود (مثال: 09123456789).";
-    }
-    setFieldErrors(next);
-    return Object.keys(next).length === 0;
-  };
-
-  const validateStep2 = (): boolean => {
-    const next: FieldErrors = {};
-    if (!form.email.trim()) {
-      next.email = "ایمیل را وارد کنید.";
-    } else if (!isValidEmail(form.email)) {
-      next.email = "ایمیل معتبر وارد کنید (مثال: name@example.com).";
-    }
-    if (!form.password) {
-      next.password = "رمز عبور را وارد کنید.";
-    } else if (!isValidPassword(form.password)) {
-      next.password = "رمز عبور باید حداقل ۸ کاراکتر باشد.";
-    }
-    setFieldErrors(next);
-    return Object.keys(next).length === 0;
-  };
-
-  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+  const requestCode = async () => {
     setError("");
-    setSuccess("");
-
-    if (step === 1) {
-      if (!validateStep1()) return;
-      setStep(2);
+    setDevCode(null);
+    if (!form.mobile.trim()) {
+      setFieldErrors({ mobile: "شماره موبایل را وارد کنید." });
+      return;
+    }
+    if (!isValidIranMobile(form.mobile)) {
+      setFieldErrors({ mobile: "شماره باید ۱۱ رقم و با ۰۹ شروع شود." });
       return;
     }
 
-    if (!validateStep2()) return;
-
+    setIsSubmitting(true);
     try {
-      setIsSubmitting(true);
+      const res = await api.requestOtp(normalizeMobile(form.mobile), "signup");
+      setForm((prev) => ({ ...prev, code: "" }));
+      setPhase("otp");
+      setCooldown(60);
+      if (res.devCode) setDevCode(res.devCode);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "ارسال کد ناموفق بود.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const verifyCode = async (codeOverride?: string) => {
+    if (verifyingRef.current) return;
+    const code = onlyDigits(codeOverride ?? form.code);
+    setError("");
+    if (code.length !== 6) {
+      setFieldErrors({ code: "کد ۶ رقمی را کامل وارد کنید." });
+      return;
+    }
+
+    verifyingRef.current = true;
+    setIsSubmitting(true);
+    try {
+      const res = await api.verifyOtpSignup(normalizeMobile(form.mobile), code);
+      setSignupToken(res.signupToken);
+      setStep(2);
+      setPhase("mobile");
+      setDevCode(null);
+      setFieldErrors({});
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "تأیید کد ناموفق بود.");
+      setForm((prev) => ({ ...prev, code: "" }));
+    } finally {
+      verifyingRef.current = false;
+      setIsSubmitting(false);
+    }
+  };
+
+  const completeSignup = async () => {
+    setError("");
+    const next: FieldErrors = {};
+    if (!form.firstName.trim()) next.firstName = "نام را وارد کنید.";
+    if (!form.lastName.trim()) next.lastName = "نام خانوادگی را وارد کنید.";
+    setFieldErrors(next);
+    if (Object.keys(next).length > 0) return;
+    if (!signupToken) {
+      setError("تأیید موبایل منقضی شده است. دوباره شروع کنید.");
+      setStep(1);
+      setPhase("mobile");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
       setSessionPersist(true);
       const session = await api.register({
         firstName: form.firstName.trim(),
         lastName: form.lastName.trim(),
-        mobile: form.mobile.trim(),
-        email: form.email.trim().toLowerCase(),
-        password: form.password,
+        mobile: normalizeMobile(form.mobile),
+        signupToken,
       });
       setStoredSessionId(session.sessionId);
       await refresh();
-      setSuccess("حساب شما با موفقیت ساخته شد. در حال انتقال...");
+      setSuccess("حساب شما ساخته شد. در حال انتقال...");
       const rawNext = new URLSearchParams(window.location.search).get("next");
-      const next =
+      const nextPath =
         rawNext === "/checkout" || rawNext?.startsWith("/checkout?")
           ? "/cart"
           : rawNext;
       window.setTimeout(() => {
-        router.push(next && next.startsWith("/") ? next : "/");
+        router.push(nextPath && nextPath.startsWith("/") ? nextPath : "/");
       }, 700);
     } catch (err) {
       setError(
@@ -136,6 +159,22 @@ export default function SignupPage() {
       setIsSubmitting(false);
     }
   };
+
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setSuccess("");
+    if (step === 1) {
+      if (phase === "mobile") await requestCode();
+      else await verifyCode();
+      return;
+    }
+    await completeSignup();
+  };
+
+  const stepLabels = [
+    { n: 1, label: "تأیید موبایل" },
+    { n: 2, label: "مشخصات" },
+  ];
 
   return (
     <div className="relative min-h-screen overflow-hidden">
@@ -182,10 +221,10 @@ export default function SignupPage() {
               <h2 className="mb-4 text-3xl xl:text-4xl 2xl:text-5xl font-black leading-[1.35] text-white">
                 عضویت در پریسما
                 <br />
-                با پس‌زمینه‌ای هنری
+                با کد تأیید موبایل
               </h2>
               <ul className="space-y-3 text-sm leading-7 text-[#efcea3] xl:text-base">
-                {["تخفیف‌های ویژه اعضا", "پیگیری آسان سفارش", "پشتیبانی سریع‌تر"].map((item) => (
+                {["ثبت‌نام سریع با OTP", "پیگیری آسان سفارش", "پشتیبانی سریع‌تر"].map((item) => (
                   <li key={item} className="flex items-center gap-3">
                     <span className="h-2 w-2 rounded-full bg-[#d4a96a]" />
                     {item}
@@ -206,24 +245,33 @@ export default function SignupPage() {
                   </p>
                 </div>
 
-                <div className="mb-7 flex items-center justify-center gap-2">
-                  {[1, 2].map((s) => (
-                    <div key={s} className="flex items-center gap-2">
-                      <div
-                        className={`flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold transition-all ${
-                          step >= s ? "bg-[#f3ddbb] text-[#3c220c]" : "bg-white/10 text-[#f0d3aa]"
-                        }`}
-                      >
-                        {step > s ? (
-                          <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                            <path d="M5 13l4 4L19 7" />
-                          </svg>
-                        ) : (
-                          s
-                        )}
+                <div className="mb-7 flex items-center justify-center gap-3">
+                  {stepLabels.map((s, idx) => (
+                    <div key={s.n} className="flex items-center gap-3">
+                      <div className="flex flex-col items-center gap-1.5">
+                        <div
+                          className={`flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold transition-all ${
+                            step >= s.n ? "bg-[#f3ddbb] text-[#3c220c]" : "bg-white/10 text-[#f0d3aa]"
+                          }`}
+                        >
+                          {step > s.n ? (
+                            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                              <path d="M5 13l4 4L19 7" />
+                            </svg>
+                          ) : (
+                            s.n
+                          )}
+                        </div>
+                        <span
+                          className={`text-[11px] ${
+                            step >= s.n ? "font-medium text-[#f3ddbb]" : "text-[#f0d3aa]/70"
+                          }`}
+                        >
+                          {s.label}
+                        </span>
                       </div>
-                      {s < 2 && (
-                        <div className={`h-0.5 w-14 transition-all ${step > s ? "bg-[#f3ddbb]" : "bg-white/15"}`} />
+                      {idx < stepLabels.length - 1 && (
+                        <div className={`mb-5 h-0.5 w-10 sm:w-14 ${step > s.n ? "bg-[#f3ddbb]" : "bg-white/15"}`} />
                       )}
                     </div>
                   ))}
@@ -231,8 +279,139 @@ export default function SignupPage() {
 
                 <form onSubmit={handleSubmit} className="space-y-4" noValidate>
                   {step === 1 ? (
+                    phase === "mobile" ? (
+                      <>
+                        <p className="text-center text-sm text-[#f0d3aa]">
+                          ابتدا شماره موبایل را وارد کنید تا کد تأیید ارسال شود.
+                        </p>
+                        <div>
+                          <label htmlFor="signup-mobile" className="mb-2 block text-sm font-medium text-[#f7ead3]">
+                            شماره موبایل
+                          </label>
+                          <div className="relative">
+                            <input
+                              id="signup-mobile"
+                              type="tel"
+                              inputMode="numeric"
+                              autoComplete="tel"
+                              value={form.mobile}
+                              onChange={(e) => {
+                                setForm({ ...form, mobile: normalizeMobile(e.target.value) });
+                                clearFieldError("mobile");
+                                setError("");
+                              }}
+                              placeholder="09123456789"
+                              className={`${inputBase} pr-11 ${fieldErrors.mobile ? inputBad : inputOk}`}
+                              dir="ltr"
+                            />
+                            <svg
+                              className="pointer-events-none absolute right-3.5 top-3.5 text-[#f0d3aa]"
+                              width="18"
+                              height="18"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                              strokeWidth={1.5}
+                            >
+                              <path d="M3 5a2 2 0 0 1 2-2h3.28a1 1 0 0 1 .948.684l1.498 4.493a1 1 0 0 1-.502 1.21l-2.257 1.13a11.042 11.042 0 0 0 5.516 5.516l1.13-2.257a1 1 0 0 1 1.21-.502l4.493 1.498a1 1 0 0 1 .684.949V19a2 2 0 0 1-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                            </svg>
+                          </div>
+                          <FieldError message={fieldErrors.mobile} />
+                        </div>
+                        <button
+                          type="submit"
+                          disabled={isSubmitting || form.mobile.length < 11}
+                          className="w-full rounded-2xl bg-[#f3ddbb] py-3.5 text-base font-bold text-[#3c220c] shadow-[0_10px_24px_rgba(15,10,5,0.25)] transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          {isSubmitting ? "در حال ارسال..." : "دریافت کد تأیید"}
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <div className="rounded-2xl border border-white/10 bg-white/8 px-4 py-3 text-center">
+                          <p className="text-xs text-[#f0d3aa]">کد به این شماره ارسال شد</p>
+                          <p className="mt-1 text-base font-bold tracking-wide text-white" dir="ltr">
+                            {form.mobile}
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setPhase("mobile");
+                              setForm((prev) => ({ ...prev, code: "" }));
+                              setError("");
+                              setDevCode(null);
+                            }}
+                            className="mt-2 text-xs font-medium text-[#f1d5ad] hover:text-white hover:underline"
+                          >
+                            تغییر شماره
+                          </button>
+                        </div>
+
+                        <div>
+                          <p className="mb-3 text-center text-sm font-medium text-[#f7ead3]">کد ۶ رقمی</p>
+                          <OtpCodeInput
+                            value={form.code}
+                            autoFocus
+                            disabled={isSubmitting}
+                            invalid={Boolean(fieldErrors.code || error)}
+                            onChange={(code) => {
+                              setForm((prev) => ({ ...prev, code }));
+                              clearFieldError("code");
+                              setError("");
+                            }}
+                            onComplete={(code) => void verifyCode(code)}
+                          />
+                          <FieldError message={fieldErrors.code} />
+                        </div>
+
+                        {devCode ? (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setForm((prev) => ({ ...prev, code: devCode }));
+                              void verifyCode(devCode);
+                            }}
+                            className="w-full rounded-xl border border-dashed border-[#d4a96a]/40 bg-[#d4a96a]/10 px-3 py-2.5 text-xs text-[#f0d3aa] transition-colors hover:bg-[#d4a96a]/15"
+                          >
+                            کد تست: <span className="font-bold text-white" dir="ltr">{devCode}</span>
+                            <span className="mr-1 text-[#f1d5ad]">— کلیک برای تأیید</span>
+                          </button>
+                        ) : null}
+
+                        <button
+                          type="submit"
+                          disabled={isSubmitting || form.code.length !== 6}
+                          className="w-full rounded-2xl bg-[#f3ddbb] py-3.5 text-base font-bold text-[#3c220c] disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          {isSubmitting ? "در حال تأیید..." : "تأیید و ادامه"}
+                        </button>
+
+                        <button
+                          type="button"
+                          disabled={cooldown > 0 || isSubmitting}
+                          onClick={() => void requestCode()}
+                          className="w-full text-sm text-[#f0d3aa] hover:text-white disabled:opacity-50"
+                        >
+                          {cooldown > 0
+                            ? `ارسال مجدد تا ${cooldown.toLocaleString("fa-IR")} ثانیه دیگر`
+                            : "ارسال مجدد کد"}
+                        </button>
+                      </>
+                    )
+                  ) : (
                     <>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="rounded-2xl border border-emerald-300/30 bg-emerald-500/10 px-4 py-3 text-center">
+                        <p className="text-xs text-emerald-100/80">شماره تأیید شد</p>
+                        <p className="mt-1 font-bold text-white" dir="ltr">
+                          {form.mobile}
+                        </p>
+                      </div>
+
+                      <p className="text-center text-sm text-[#f0d3aa]">
+                        برای تکمیل ثبت‌نام، نام و نام خانوادگی را وارد کنید.
+                      </p>
+
+                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                         <div>
                           <label htmlFor="signup-firstname" className="mb-2 block text-sm font-medium text-[#f7ead3]">
                             نام
@@ -240,6 +419,8 @@ export default function SignupPage() {
                           <input
                             id="signup-firstname"
                             type="text"
+                            autoComplete="given-name"
+                            autoFocus
                             value={form.firstName}
                             onChange={(e) => {
                               setForm({ ...form, firstName: e.target.value });
@@ -247,7 +428,6 @@ export default function SignupPage() {
                             }}
                             placeholder="نام"
                             className={`${inputBase} ${fieldErrors.firstName ? inputBad : inputOk}`}
-                            aria-invalid={Boolean(fieldErrors.firstName)}
                           />
                           <FieldError message={fieldErrors.firstName} />
                         </div>
@@ -258,6 +438,7 @@ export default function SignupPage() {
                           <input
                             id="signup-lastname"
                             type="text"
+                            autoComplete="family-name"
                             value={form.lastName}
                             onChange={(e) => {
                               setForm({ ...form, lastName: e.target.value });
@@ -265,207 +446,24 @@ export default function SignupPage() {
                             }}
                             placeholder="نام خانوادگی"
                             className={`${inputBase} ${fieldErrors.lastName ? inputBad : inputOk}`}
-                            aria-invalid={Boolean(fieldErrors.lastName)}
                           />
                           <FieldError message={fieldErrors.lastName} />
                         </div>
                       </div>
 
-                      <div>
-                        <label htmlFor="signup-mobile" className="mb-2 block text-sm font-medium text-[#f7ead3]">
-                          شماره موبایل
-                        </label>
-                        <div className="relative">
-                          <input
-                            id="signup-mobile"
-                            type="tel"
-                            inputMode="numeric"
-                            value={form.mobile}
-                            onChange={(e) => {
-                              setForm({ ...form, mobile: e.target.value });
-                              clearFieldError("mobile");
-                            }}
-                            onBlur={() => {
-                              if (form.mobile.trim() && !isValidIranMobile(form.mobile)) {
-                                setFieldErrors((prev) => ({
-                                  ...prev,
-                                  mobile:
-                                    "شماره موبایل باید ۱۱ رقم و با ۰۹ شروع شود (مثال: 09123456789).",
-                                }));
-                              }
-                            }}
-                            placeholder="09123456789"
-                            className={`${inputBase} pr-11 ${fieldErrors.mobile ? inputBad : inputOk}`}
-                            dir="ltr"
-                            aria-invalid={Boolean(fieldErrors.mobile)}
-                          />
-                          <svg
-                            className="absolute right-3.5 top-3.5 text-[#f0d3aa]"
-                            width="18"
-                            height="18"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                            strokeWidth={1.5}
-                          >
-                            <path d="M3 5a2 2 0 0 1 2-2h3.28a1 1 0 0 1 .948.684l1.498 4.493a1 1 0 0 1-.502 1.21l-2.257 1.13a11.042 11.042 0 0 0 5.516 5.516l1.13-2.257a1 1 0 0 1 1.21-.502l4.493 1.498a1 1 0 0 1 .684.949V19a2 2 0 0 1-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                          </svg>
-                        </div>
-                        <FieldError message={fieldErrors.mobile} />
-                      </div>
-
                       <button
                         type="submit"
-                        className="w-full rounded-2xl bg-[#f3ddbb] py-3.5 text-base font-bold text-[#3c220c] shadow-[0_10px_24px_rgba(15,10,5,0.25)] transition-colors hover:bg-white"
+                        disabled={isSubmitting}
+                        className="w-full rounded-2xl bg-[#f3ddbb] py-3.5 text-base font-bold text-[#3c220c] transition-colors hover:bg-white disabled:opacity-50"
                       >
-                        ادامه
+                        {isSubmitting ? "در حال ثبت‌نام..." : "تکمیل ثبت‌نام"}
                       </button>
-                    </>
-                  ) : (
-                    <>
-                      <div>
-                        <label htmlFor="signup-email" className="mb-2 block text-sm font-medium text-[#f7ead3]">
-                          ایمیل
-                        </label>
-                        <div className="relative">
-                          <input
-                            id="signup-email"
-                            type="email"
-                            value={form.email}
-                            onChange={(e) => {
-                              setForm({ ...form, email: e.target.value });
-                              clearFieldError("email");
-                            }}
-                            onBlur={() => {
-                              if (form.email.trim() && !isValidEmail(form.email)) {
-                                setFieldErrors((prev) => ({
-                                  ...prev,
-                                  email: "ایمیل معتبر وارد کنید (مثال: name@example.com).",
-                                }));
-                              }
-                            }}
-                            placeholder="example@email.com"
-                            className={`${inputBase} pr-11 ${fieldErrors.email ? inputBad : inputOk}`}
-                            dir="ltr"
-                            aria-invalid={Boolean(fieldErrors.email)}
-                          />
-                          <svg
-                            className="absolute right-3.5 top-3.5 text-[#f0d3aa]"
-                            width="18"
-                            height="18"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                            strokeWidth={1.5}
-                          >
-                            <path d="M3 8l7.89 5.26a2 2 0 0 0 2.22 0L21 8M5 19h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2z" />
-                          </svg>
-                        </div>
-                        <FieldError message={fieldErrors.email} />
-                      </div>
-
-                      <div>
-                        <label htmlFor="signup-password" className="mb-2 block text-sm font-medium text-[#f7ead3]">
-                          رمز عبور
-                        </label>
-                        <div className="relative">
-                          <input
-                            id="signup-password"
-                            type={showPass ? "text" : "password"}
-                            minLength={8}
-                            maxLength={128}
-                            value={form.password}
-                            onChange={(e) => {
-                              setForm({ ...form, password: e.target.value });
-                              clearFieldError("password");
-                            }}
-                            onBlur={() => {
-                              if (form.password && !isValidPassword(form.password)) {
-                                setFieldErrors((prev) => ({
-                                  ...prev,
-                                  password: "رمز عبور باید حداقل ۸ کاراکتر باشد.",
-                                }));
-                              }
-                            }}
-                            placeholder="حداقل ۸ کاراکتر"
-                            className={`${inputBase} pr-11 pl-11 ${fieldErrors.password ? inputBad : inputOk}`}
-                            aria-invalid={Boolean(fieldErrors.password)}
-                          />
-                          <svg
-                            className="absolute right-3.5 top-3.5 text-[#f0d3aa]"
-                            width="18"
-                            height="18"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                            strokeWidth={1.5}
-                          >
-                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-                            <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-                          </svg>
-                          <button
-                            type="button"
-                            onClick={() => setShowPass(!showPass)}
-                            className="absolute left-3.5 top-3.5 text-[#f0d3aa] hover:text-white"
-                            aria-label={showPass ? "مخفی کردن رمز" : "نمایش رمز"}
-                          >
-                            <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                              {showPass ? (
-                                <>
-                                  <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
-                                  <line x1="1" y1="1" x2="23" y2="23" />
-                                </>
-                              ) : (
-                                <>
-                                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                                  <circle cx="12" cy="12" r="3" />
-                                </>
-                              )}
-                            </svg>
-                          </button>
-                        </div>
-                        <FieldError message={fieldErrors.password} />
-                        {form.password && (
-                          <div className="mt-2">
-                            <div className="mb-1 flex gap-1">
-                              {[1, 2, 3, 4].map((i) => (
-                                <div
-                                  key={i}
-                                  className={`h-1.5 flex-1 rounded-full transition-all ${i <= strength ? strengthColor : "bg-[#e8cfa8]"}`}
-                                />
-                              ))}
-                            </div>
-                            <span className="text-xs text-[#f0d3aa]">قدرت رمز: {strengthLabel}</span>
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="flex gap-3">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setFieldErrors({});
-                            setError("");
-                            setStep(1);
-                          }}
-                          className="flex-1 rounded-2xl border-2 border-white/15 bg-white/8 py-3 text-sm font-medium text-[#f7ead3] transition-colors hover:border-[#f1d5ad]/50"
-                        >
-                          بازگشت
-                        </button>
-                        <button
-                          type="submit"
-                          disabled={isSubmitting}
-                          className="flex-1 rounded-2xl bg-[#f3ddbb] py-3 text-sm font-bold text-[#3c220c] transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
-                        >
-                          {isSubmitting ? "در حال ثبت‌نام..." : "ثبت‌نام"}
-                        </button>
-                      </div>
                     </>
                   )}
 
                   {(error || success) && (
                     <div
-                      className={`rounded-2xl border px-4 py-3 text-sm ${
+                      className={`rounded-2xl border px-4 py-3 text-center text-sm ${
                         error
                           ? "border-red-300/50 bg-red-500/10 text-red-100"
                           : "border-emerald-300/40 bg-emerald-500/10 text-emerald-50"

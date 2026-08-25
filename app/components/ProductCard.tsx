@@ -41,28 +41,6 @@ export default function ProductCard({ product }: { product: Product }) {
             alt={product.name}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
           />
-          <div className="absolute top-3 right-3 flex flex-col gap-1.5">
-            {product.isNew && (
-              <span className="bg-[#2d4a2d] text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
-                جدید
-              </span>
-            )}
-            {discountPct > 0 && (
-              <span className="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
-                {discountPct}٪ تخفیف
-              </span>
-            )}
-            {outOfStock ? (
-              <span className="bg-[#2e1a08]/80 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
-                ناموجود
-              </span>
-            ) : isLowStock(product) ? (
-              <span className="bg-amber-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
-                موجودی کم — {stock.toLocaleString("fa-IR")}
-              </span>
-            ) : null}
-          </div>
-
           <button
             type="button"
             aria-label={wishlisted ? "حذف از علاقه‌مندی‌ها" : "افزودن به علاقه‌مندی‌ها"}
@@ -89,78 +67,120 @@ export default function ProductCard({ product }: { product: Product }) {
             </svg>
           </button>
 
+          <div className="absolute top-3 right-3 z-[5] flex w-fit max-w-[min(11rem,calc(100%-4.5rem))] flex-col gap-1.5">
+            {discountPct > 0 && (
+              <span className="rounded-full bg-red-500 px-2 py-0.5 text-center text-[10px] font-bold text-white">
+                {discountPct}٪ تخفیف
+              </span>
+            )}
+            {outOfStock && (
+              <span className="rounded-full bg-[#2e1a08]/80 px-2 py-0.5 text-center text-[10px] font-bold text-white">
+                ناموجود
+              </span>
+            )}
+            {!outOfStock && isLowStock(product) && (
+              <span className="rounded-full bg-[#f97316] px-2.5 py-1 text-center text-[10px] font-bold leading-4 text-white shadow-sm sm:text-[11px]">
+                {stock === 1
+                  ? "یک عدد مانده است"
+                  : `${stock.toLocaleString("fa-IR")} عدد مانده است`}
+              </span>
+            )}
+          </div>
+
           {outOfStock ? (
-            <div className="absolute bottom-3 left-3 right-3 rounded-xl bg-[#2e1a08]/85 py-2.5 text-center text-xs font-medium text-white">
-              ناموجود
+            <div className="absolute inset-x-0 bottom-0 px-2.5 pb-2.5 pt-8 opacity-100 translate-y-0 md:opacity-0 md:translate-y-1.5 md:group-hover:opacity-100 md:group-hover:translate-y-0 transition-all duration-300">
+              <div className="rounded-full bg-[#2e1a08]/70 py-1.5 text-center text-[11px] font-medium text-white backdrop-blur-sm">
+                ناموجود
+              </div>
             </div>
           ) : qtyInCart === 0 ? (
-            <button
-              className="absolute bottom-3 left-3 right-3 bg-[#6d4014] text-white text-xs sm:text-sm py-2.5 rounded-xl opacity-100 translate-y-0 md:opacity-0 md:translate-y-2 md:group-hover:opacity-100 md:group-hover:translate-y-0 transition-all duration-300 font-medium"
-              onClick={(e) => {
-                e.preventDefault();
-                const result = addItem(product.id, 1);
-                if (!result.ok) {
-                  showStockMsg(result.reason);
-                  return;
-                }
-                setAdded(true);
-                window.setTimeout(() => setAdded(false), 1200);
-              }}
-            >
-              {added ? "به سبد اضافه شد" : "افزودن به سبد"}
-            </button>
-          ) : (
-            <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between bg-[#6d4014] text-white py-1.5 px-2 rounded-xl opacity-100 translate-y-0 md:opacity-0 md:translate-y-2 md:group-hover:opacity-100 md:group-hover:translate-y-0 transition-all duration-300">
-              {qtyInCart === 1 ? (
-                <button
-                  className="w-10 h-10 rounded-md bg-red-600/90 hover:bg-red-500 flex items-center justify-center"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    removeItem(product.id);
-                  }}
-                  aria-label="حذف از سبد"
-                >
-                  <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path d="M3 6h18" />
-                    <path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2" />
-                    <path d="M19 6l-1 14a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1L5 6" />
-                  </svg>
-                </button>
-              ) : (
-                <button
-                  className="w-10 h-10 rounded-md bg-[#8a5419] hover:bg-[#a96c20] flex items-center justify-center text-base leading-none"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    updateQty(product.id, qtyInCart - 1);
-                  }}
-                  aria-label="کاهش تعداد"
-                >
-                  −
-                </button>
-              )}
-
-              <span className="text-xs font-medium">
-                در سبد: {qtyInCart.toLocaleString("fa-IR")}
-              </span>
-
+            <div className="absolute inset-x-0 bottom-0 px-2.5 pb-2.5 pt-8 opacity-100 translate-y-0 md:opacity-0 md:translate-y-1.5 md:group-hover:opacity-100 md:group-hover:translate-y-0 transition-all duration-300">
               <button
-                className={`w-10 h-10 rounded-md flex items-center justify-center text-base leading-none ${
-                  atMax ? "bg-[#5a3a1a] opacity-50 cursor-not-allowed" : "bg-[#8a5419] hover:bg-[#a96c20]"
-                }`}
+                type="button"
+                className="flex w-full items-center justify-center gap-1.5 rounded-full border border-white/40 bg-white/90 py-2 text-[11px] font-semibold text-[#4e2e0e] shadow-sm backdrop-blur-md transition-colors hover:bg-white sm:text-xs"
                 onClick={(e) => {
                   e.preventDefault();
+                  e.stopPropagation();
                   const result = addItem(product.id, 1);
-                  if (!result.ok) showStockMsg(result.reason);
+                  if (!result.ok) {
+                    showStockMsg(result.reason);
+                    return;
+                  }
+                  setAdded(true);
+                  window.setTimeout(() => setAdded(false), 1200);
                 }}
-                aria-label="افزایش تعداد"
-                disabled={atMax}
               >
-                +
+                <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                  <path d="M6 6h15l-1.5 9h-12z" strokeLinejoin="round" />
+                  <circle cx="9" cy="20" r="1" fill="currentColor" stroke="none" />
+                  <circle cx="18" cy="20" r="1" fill="currentColor" stroke="none" />
+                  <path d="M6 6L5 3H2" strokeLinecap="round" />
+                </svg>
+                {added ? "اضافه شد" : "افزودن به سبد"}
               </button>
+            </div>
+          ) : (
+            <div className="absolute inset-x-0 bottom-0 flex justify-center px-2.5 pb-2.5 pt-8 opacity-100 translate-y-0 md:opacity-0 md:translate-y-1.5 md:group-hover:opacity-100 md:group-hover:translate-y-0 transition-all duration-300">
+              <div className="inline-flex items-center gap-0.5 rounded-full border border-white/40 bg-white/90 p-1 shadow-sm backdrop-blur-md">
+                {qtyInCart === 1 ? (
+                  <button
+                    type="button"
+                    className="flex h-8 w-8 items-center justify-center rounded-full text-[#b45309] transition-colors hover:bg-[#f5e9d5]"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      removeItem(product.id);
+                    }}
+                    aria-label="حذف از سبد"
+                  >
+                    <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                      <path d="M3 6h18" />
+                      <path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2" />
+                      <path d="M19 6l-1 14a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1L5 6" />
+                    </svg>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="flex h-8 w-8 items-center justify-center rounded-full text-[#6d4014] transition-colors hover:bg-[#f5e9d5]"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      updateQty(product.id, qtyInCart - 1);
+                    }}
+                    aria-label="کاهش تعداد"
+                  >
+                    <span className="text-base leading-none">−</span>
+                  </button>
+                )}
+
+                <span className="min-w-[1.75rem] text-center text-xs font-semibold tabular-nums text-[#2e1a08]">
+                  {qtyInCart.toLocaleString("fa-IR")}
+                </span>
+
+                <button
+                  type="button"
+                  className={`flex h-8 w-8 items-center justify-center rounded-full transition-colors ${
+                    atMax
+                      ? "cursor-not-allowed text-[#c4a882]"
+                      : "text-[#6d4014] hover:bg-[#f5e9d5]"
+                  }`}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const result = addItem(product.id, 1);
+                    if (!result.ok) showStockMsg(result.reason);
+                  }}
+                  aria-label="افزایش تعداد"
+                  disabled={atMax}
+                >
+                  <span className="text-base leading-none">+</span>
+                </button>
+              </div>
             </div>
           )}
           {stockMsg && (
-            <div className="absolute inset-x-3 top-1/2 -translate-y-1/2 rounded-xl bg-[#2e1a08]/90 px-3 py-2 text-center text-[11px] font-medium text-white">
+            <div className="absolute inset-x-3 top-1/2 z-20 -translate-y-1/2 rounded-xl bg-[#2e1a08]/90 px-3 py-2 text-center text-[11px] font-medium text-white">
               {stockMsg}
             </div>
           )}

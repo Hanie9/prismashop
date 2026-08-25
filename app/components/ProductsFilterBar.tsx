@@ -1,91 +1,102 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import DialogCloseButton from "./DialogCloseButton";
 
 type Option = { value: string; label: string };
 
 const DEFAULT_SORT = "featured";
 
-function Dropdown({
-  id,
-  label,
-  value,
-  onChange,
-  options,
-  open,
-  onOpenChange,
-}: {
-  id: string;
-  label: string;
+const SORT_ITEMS: {
   value: string;
-  onChange: (value: string) => void;
-  options: Option[];
-  open: boolean;
-  onOpenChange: (id: string | null) => void;
-}) {
-  const rootRef = useRef<HTMLDivElement>(null);
-  const selectedLabel = options.find((option) => option.value === value)?.label ?? options[0]?.label ?? "";
+  label: string;
+  icon: ReactNode;
+}[] = [
+  {
+    value: "bestseller",
+    label: "پرفروش‌ترین",
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+        <path d="M3 17l6-6 4 4 8-8" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M14 7h7v7" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    ),
+  },
+  {
+    value: "cheap",
+    label: "ارزان‌ترین",
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+        <path d="M12 2v20" strokeLinecap="round" />
+        <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    ),
+  },
+  {
+    value: "expensive",
+    label: "گران‌ترین",
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+        <circle cx="12" cy="12" r="9" />
+        <path d="M12 7v10M9.5 10h5a1.5 1.5 0 0 1 0 3h-5" strokeLinecap="round" />
+      </svg>
+    ),
+  },
+];
 
+function BottomSheet({
+  open,
+  title,
+  onClose,
+  children,
+  footer,
+}: {
+  open: boolean;
+  title: string;
+  onClose: () => void;
+  children: ReactNode;
+  footer?: ReactNode;
+}) {
   useEffect(() => {
     if (!open) return;
-
-    const handlePointerDown = (event: MouseEvent) => {
-      if (!rootRef.current?.contains(event.target as Node)) {
-        onOpenChange(null);
-      }
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
     };
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = prev;
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open, onClose]);
 
-    document.addEventListener("mousedown", handlePointerDown);
-    return () => document.removeEventListener("mousedown", handlePointerDown);
-  }, [open, onOpenChange]);
+  if (!open) return null;
 
   return (
-    <div ref={rootRef} className="relative min-w-0 w-full">
+    <div className="fixed inset-0 z-[120] flex items-end justify-center sm:items-center">
       <button
         type="button"
-        aria-expanded={open}
-        onClick={() => onOpenChange(open ? null : id)}
-        className={`w-full rounded-2xl border bg-[#fdf8f3] px-4 pl-12 py-2.5 text-sm text-[#4e2e0e] shadow-sm focus:outline-none text-right truncate transition-colors ${
-          open ? "border-[#a96c20]" : "border-[#e8cfa8] focus:border-[#a96c20]"
-        }`}
+        aria-label="بستن"
+        className="absolute inset-0 bg-[#2e1a08]/45 backdrop-blur-[2px]"
+        onClick={onClose}
+      />
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+        className="relative flex max-h-[min(92dvh,40rem)] w-full max-w-lg flex-col overflow-hidden rounded-t-[28px] border border-[#ead7bb] bg-white shadow-[0_-20px_60px_rgba(89,48,10,0.2)] sm:rounded-[28px]"
       >
-        {selectedLabel}
-        <span
-          className={`absolute left-4 top-1/2 -translate-y-1/2 text-[#a96c20] transition-transform duration-200 ${
-            open ? "rotate-180" : "rotate-0"
-          }`}
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2}>
-            <path d="m6 9 6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </span>
-      </button>
-      {open && (
-        <div className="absolute z-40 mt-2 w-full min-w-[200px] rounded-2xl border border-[#e8cfa8] bg-white shadow-[0_16px_40px_rgba(89,48,10,0.14)] overflow-hidden">
-          <div className="px-3 py-2 text-[11px] text-[#a96c20] border-b border-[#f5e9d5]">{label}</div>
-          <ul className="max-h-56 overflow-auto">
-            {options.map((option) => (
-              <li key={option.value}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    onChange(option.value);
-                    onOpenChange(null);
-                  }}
-                  className={`w-full text-right px-4 py-2.5 text-sm transition-colors ${
-                    value === option.value
-                      ? "bg-[#fdf1df] text-[#6d4014] font-medium"
-                      : "text-[#4e2e0e] hover:bg-[#f8efe2]"
-                  }`}
-                >
-                  {option.label}
-                </button>
-              </li>
-            ))}
-          </ul>
+        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-[#f0e0c8] px-4 py-3.5 sm:px-5">
+          <h2 className="text-base font-black text-[#2e1a08] sm:text-lg">{title}</h2>
+          <DialogCloseButton onClick={onClose} />
         </div>
-      )}
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-5">{children}</div>
+        {footer && (
+          <div className="shrink-0 border-t border-[#f0e0c8] bg-white px-4 py-3 sm:px-5">{footer}</div>
+        )}
+      </div>
     </div>
   );
 }
@@ -93,149 +104,361 @@ function Dropdown({
 export default function ProductsFilterBar({
   query,
   categoryId,
-  price,
+  minPrice,
+  maxPrice,
   sort,
   sale,
+  inStock,
   categoryOptions,
-  priceOptions,
-  sortOptions,
 }: {
   query: string;
   categoryId: string;
-  price: string;
+  minPrice: string;
+  maxPrice: string;
   sort: string;
   sale: boolean;
+  inStock: boolean;
   categoryOptions: Option[];
-  priceOptions: Option[];
-  sortOptions: Option[];
 }) {
   const router = useRouter();
   const pathname = usePathname();
 
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [sortOpen, setSortOpen] = useState(false);
+
   const [catValue, setCatValue] = useState(categoryId);
-  const [priceValue, setPriceValue] = useState(price);
-  const [sortValue, setSortValue] = useState(sort);
+  const [minValue, setMinValue] = useState(minPrice);
+  const [maxValue, setMaxValue] = useState(maxPrice);
   const [saleValue, setSaleValue] = useState(sale);
-  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+  const [stockValue, setStockValue] = useState(inStock);
 
   useEffect(() => {
     setCatValue(categoryId);
-    setPriceValue(price);
-    setSortValue(sort);
+    setMinValue(minPrice);
+    setMaxValue(maxPrice);
     setSaleValue(sale);
-    setOpenDropdown(null);
-  }, [categoryId, price, sort, sale]);
+    setStockValue(inStock);
+  }, [categoryId, minPrice, maxPrice, sale, inStock, filterOpen]);
 
-  const selectedSummary = useMemo(() => {
-    const selected: string[] = [];
-    const cat = categoryOptions.find((item) => item.value === catValue)?.label;
-    const priceLabel = priceOptions.find((item) => item.value === priceValue)?.label;
-    const sortLabel = sortOptions.find((item) => item.value === sortValue)?.label;
-    if (cat && catValue) selected.push(`دسته: ${cat}`);
-    if (priceLabel && priceValue) selected.push(`قیمت: ${priceLabel}`);
-    if (sortLabel && sortValue !== DEFAULT_SORT) selected.push(`مرتب‌سازی: ${sortLabel}`);
-    if (saleValue) selected.push("فقط تخفیف‌دار");
-    return selected;
-  }, [catValue, priceValue, sortValue, saleValue, categoryOptions, priceOptions, sortOptions]);
+  const activeFilterCount = useMemo(() => {
+    let n = 0;
+    if (categoryId) n += 1;
+    if (minPrice || maxPrice) n += 1;
+    if (sale) n += 1;
+    if (inStock) n += 1;
+    return n;
+  }, [categoryId, minPrice, maxPrice, sale, inStock]);
 
-  const hasAppliedFilters = Boolean(categoryId || price || sale || sort !== DEFAULT_SORT);
-  const hasDraftFilters = Boolean(catValue || priceValue || saleValue || sortValue !== DEFAULT_SORT);
-  const canClear = hasAppliedFilters || hasDraftFilters;
+  const sortLabel =
+    SORT_ITEMS.find((item) => item.value === sort)?.label ?? "مرتب‌سازی";
 
-  const applyFilters = () => {
-    setOpenDropdown(null);
+  const pushParams = (patch: {
+    cat?: string;
+    min?: string;
+    max?: string;
+    sort?: string;
+    sale?: boolean;
+    stock?: boolean;
+  }) => {
     const params = new URLSearchParams();
     if (query) params.set("q", query);
-    if (catValue) params.set("cat", catValue);
-    if (priceValue) params.set("price", priceValue);
-    if (sortValue && sortValue !== DEFAULT_SORT) params.set("sort", sortValue);
-    if (saleValue) params.set("sale", "1");
+
+    const nextCat = patch.cat !== undefined ? patch.cat : categoryId;
+    const nextMin = patch.min !== undefined ? patch.min : minPrice;
+    const nextMax = patch.max !== undefined ? patch.max : maxPrice;
+    const nextSort = patch.sort !== undefined ? patch.sort : sort;
+    const nextSale = patch.sale !== undefined ? patch.sale : sale;
+    const nextStock = patch.stock !== undefined ? patch.stock : inStock;
+
+    if (nextCat) params.set("cat", nextCat);
+    if (nextMin) params.set("min", nextMin);
+    if (nextMax) params.set("max", nextMax);
+    if (nextSort && nextSort !== DEFAULT_SORT) params.set("sort", nextSort);
+    if (nextSale) params.set("sale", "1");
+    if (nextStock) params.set("stock", "1");
+
     const qs = params.toString();
     router.push(qs ? `${pathname}?${qs}` : pathname);
+  };
+
+  const normalizePriceInput = (raw: string) => {
+    const digits = raw.replace(/[^\d]/g, "");
+    return digits;
+  };
+
+  const applyFilters = () => {
+    let min = normalizePriceInput(minValue);
+    let max = normalizePriceInput(maxValue);
+    if (min && max && Number(min) > Number(max)) {
+      const swap = min;
+      min = max;
+      max = swap;
+    }
+    pushParams({
+      cat: catValue,
+      min,
+      max,
+      sale: saleValue,
+      stock: stockValue,
+    });
+    setFilterOpen(false);
   };
 
   const clearFilters = () => {
     setCatValue("");
-    setPriceValue("");
-    setSortValue(DEFAULT_SORT);
+    setMinValue("");
+    setMaxValue("");
     setSaleValue(false);
-    setOpenDropdown(null);
-
-    const params = new URLSearchParams();
-    if (query) params.set("q", query);
-    const qs = params.toString();
-    router.push(qs ? `${pathname}?${qs}` : pathname);
-    router.refresh();
+    setStockValue(false);
+    pushParams({
+      cat: "",
+      min: "",
+      max: "",
+      sale: false,
+      stock: false,
+      sort,
+    });
+    setFilterOpen(false);
   };
 
+  const selectSort = (value: string) => {
+    pushParams({ sort: value });
+    setSortOpen(false);
+  };
+
+  const priceInputClass =
+    "h-12 w-full rounded-2xl border border-[#ead7bb] bg-[#fffaf5] px-4 text-sm text-[#4e2e0e] placeholder:text-[#b98a53] focus:border-[#c2883a] focus:outline-none focus:ring-4 focus:ring-[#d4a96a]/15";
+
   return (
-    <div className="bg-white rounded-3xl border border-[#e8cfa8] p-3 sm:p-4 lg:p-5 shadow-sm">
-      <div className="flex items-center justify-between gap-2 mb-3 lg:mb-4">
-        <span className="text-sm font-bold text-[#2e1a08]">فیلتر محصولات</span>
-        {canClear && (
-          <button type="button" onClick={clearFilters} className="text-xs text-[#a96c20] hover:text-[#6d4014]">
-            پاک کردن فیلترها
-          </button>
-        )}
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-[1.1fr_1.1fr_1fr_auto_auto] gap-3 items-stretch">
-        <Dropdown
-          id="category"
-          label="دسته‌بندی"
-          value={catValue}
-          onChange={setCatValue}
-          options={categoryOptions}
-          open={openDropdown === "category"}
-          onOpenChange={setOpenDropdown}
-        />
-        <Dropdown
-          id="price"
-          label="محدوده قیمت"
-          value={priceValue}
-          onChange={setPriceValue}
-          options={priceOptions}
-          open={openDropdown === "price"}
-          onOpenChange={setOpenDropdown}
-        />
-        <Dropdown
-          id="sort"
-          label="مرتب‌سازی"
-          value={sortValue}
-          onChange={setSortValue}
-          options={sortOptions}
-          open={openDropdown === "sort"}
-          onOpenChange={setOpenDropdown}
-        />
-
-        <label className="flex items-center gap-2 text-sm text-[#4e2e0e] rounded-2xl border border-[#e8cfa8] bg-[#fffaf4] px-3 py-2.5 whitespace-nowrap">
-          <input
-            type="checkbox"
-            checked={saleValue}
-            onChange={(e) => setSaleValue(e.target.checked)}
-            className="w-4 h-4 accent-[#6d4014] shrink-0"
-          />
-          فقط تخفیف‌دار
-        </label>
+    <>
+      <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
+        <button
+          type="button"
+          onClick={() => {
+            setSortOpen(false);
+            setFilterOpen(true);
+          }}
+          className={`inline-flex items-center justify-center gap-2 rounded-2xl border px-3 py-3 text-sm font-bold transition-colors ${
+            activeFilterCount > 0
+              ? "border-[#8a5419] bg-[#8a5419] text-white"
+              : "border-[#ead7bb] bg-[#fffaf5] text-[#4e2e0e] hover:border-[#d4a96a] hover:bg-[#fff6ea]"
+          }`}
+        >
+          <span>فیلتر</span>
+          {activeFilterCount > 0 && (
+            <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-white/20 px-1.5 text-[11px]">
+              {activeFilterCount.toLocaleString("fa-IR")}
+            </span>
+          )}
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+            <path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z" strokeLinejoin="round" />
+          </svg>
+        </button>
 
         <button
           type="button"
-          onClick={applyFilters}
-          className="sm:col-span-2 lg:col-span-3 xl:col-span-1 bg-[#6d4014] hover:bg-[#4e2e0e] text-white text-sm px-6 py-2.5 rounded-2xl font-medium transition-colors"
+          onClick={() => {
+            setFilterOpen(false);
+            setSortOpen(true);
+          }}
+          className={`inline-flex items-center justify-center gap-2 rounded-2xl border px-3 py-3 text-sm font-bold transition-colors ${
+            sort !== DEFAULT_SORT
+              ? "border-[#8a5419] bg-[#8a5419] text-white"
+              : "border-[#ead7bb] bg-[#fffaf5] text-[#4e2e0e] hover:border-[#d4a96a] hover:bg-[#fff6ea]"
+          }`}
         >
-          اعمال فیلتر
+          <span className="truncate">{sortLabel}</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+            <path d="M3 6h13" strokeLinecap="round" />
+            <path d="M3 12h9" strokeLinecap="round" />
+            <path d="M3 18h5" strokeLinecap="round" />
+            <path d="M18 6v12" strokeLinecap="round" />
+            <path d="m15 15 3 3 3-3" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
         </button>
       </div>
 
-      {selectedSummary.length > 0 && (
-        <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-[#f5e9d5]">
-          {selectedSummary.map((item) => (
-            <span key={item} className="px-3 py-1.5 rounded-full bg-[#fdf1df] text-[#6d4014] text-sm">
-              {item}
-            </span>
-          ))}
+      <BottomSheet open={sortOpen} title="مرتب‌سازی" onClose={() => setSortOpen(false)}>
+        <ul className="space-y-2">
+          {SORT_ITEMS.map((item) => {
+            const selected = sort === item.value;
+            return (
+              <li key={item.value}>
+                <button
+                  type="button"
+                  onClick={() => selectSort(item.value)}
+                  className={`flex w-full items-center justify-between gap-3 rounded-2xl px-4 py-3.5 text-sm font-medium transition-colors ${
+                    selected
+                      ? "bg-[#8a5419] text-white shadow-[0_10px_24px_rgba(138,84,25,0.28)]"
+                      : "bg-[#fffaf5] text-[#4e2e0e] hover:bg-[#fff1df]"
+                  }`}
+                >
+                  <span className="flex items-center gap-3">
+                    <span className={selected ? "text-white" : "text-[#a96c20]"}>{item.icon}</span>
+                    {item.label}
+                  </span>
+                  {selected && (
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}>
+                      <path d="M5 13l4 4L19 7" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  )}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      </BottomSheet>
+
+      <BottomSheet
+        open={filterOpen}
+        title="فیلترها"
+        onClose={() => setFilterOpen(false)}
+        footer={
+          <div className="grid grid-cols-2 gap-2.5">
+            <button
+              type="button"
+              onClick={clearFilters}
+              className="rounded-2xl border border-[#ead7bb] bg-[#fffaf5] py-3 text-sm font-medium text-[#4e2e0e] transition-colors hover:border-[#d4a96a]"
+            >
+              پاک کردن
+            </button>
+            <button
+              type="button"
+              onClick={applyFilters}
+              className="rounded-2xl bg-[#8a5419] py-3 text-sm font-bold text-white transition-colors hover:bg-[#6d4014]"
+            >
+              اعمال فیلتر
+            </button>
+          </div>
+        }
+      >
+        <div className="space-y-6">
+          <section>
+            <h3 className="mb-3 text-sm font-bold text-[#2e1a08]">فیلترهای سریع</h3>
+            <div className="space-y-2">
+              <button
+                type="button"
+                onClick={() => setSaleValue((v) => !v)}
+                className={`flex w-full items-center justify-between gap-3 rounded-2xl border px-4 py-3.5 text-sm font-medium transition-colors ${
+                  saleValue
+                    ? "border-[#8a5419] bg-[#fff1df] text-[#6d4014]"
+                    : "border-[#ead7bb] bg-[#fffaf5] text-[#4e2e0e]"
+                }`}
+              >
+                <span className="flex items-center gap-3">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                    <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" />
+                    <line x1="7" y1="7" x2="7.01" y2="7" />
+                  </svg>
+                  فقط تخفیف‌دارها
+                </span>
+                <span
+                  className={`flex h-5 w-5 items-center justify-center rounded-md border ${
+                    saleValue ? "border-[#8a5419] bg-[#8a5419] text-white" : "border-[#d4a96a] bg-white"
+                  }`}
+                >
+                  {saleValue && (
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3}>
+                      <path d="M5 13l4 4L19 7" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  )}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setStockValue((v) => !v)}
+                className={`flex w-full items-center justify-between gap-3 rounded-2xl border px-4 py-3.5 text-sm font-medium transition-colors ${
+                  stockValue
+                    ? "border-[#8a5419] bg-[#fff1df] text-[#6d4014]"
+                    : "border-[#ead7bb] bg-[#fffaf5] text-[#4e2e0e]"
+                }`}
+              >
+                <span className="flex items-center gap-3">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" strokeLinecap="round" />
+                    <path d="M22 4 12 14.01l-3-3" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                  فقط موجودها
+                </span>
+                <span
+                  className={`flex h-5 w-5 items-center justify-center rounded-md border ${
+                    stockValue ? "border-[#8a5419] bg-[#8a5419] text-white" : "border-[#d4a96a] bg-white"
+                  }`}
+                >
+                  {stockValue && (
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3}>
+                      <path d="M5 13l4 4L19 7" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  )}
+                </span>
+              </button>
+            </div>
+          </section>
+
+          <section>
+            <h3 className="mb-3 text-sm font-bold text-[#2e1a08]">محدوده قیمت</h3>
+            <div className="grid grid-cols-2 gap-2.5">
+              <div className="relative">
+                <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-[#a96c20]">
+                  از
+                </span>
+                <input
+                  id="filter-price-min"
+                  type="text"
+                  inputMode="numeric"
+                  dir="ltr"
+                  aria-label="از"
+                  placeholder=""
+                  value={minValue}
+                  onChange={(e) => setMinValue(normalizePriceInput(e.target.value))}
+                  className={`${priceInputClass} pr-10 pl-4 text-left`}
+                />
+              </div>
+              <div className="relative">
+                <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-[#a96c20]">
+                  تا
+                </span>
+                <input
+                  id="filter-price-max"
+                  type="text"
+                  inputMode="numeric"
+                  dir="ltr"
+                  aria-label="تا"
+                  placeholder=""
+                  value={maxValue}
+                  onChange={(e) => setMaxValue(normalizePriceInput(e.target.value))}
+                  className={`${priceInputClass} pr-10 pl-4 text-left`}
+                />
+              </div>
+            </div>
+            <p className="mt-2 text-[11px] text-[#a96c20]">مبالغ به تومان وارد شوند.</p>
+          </section>
+
+          <section>
+            <h3 className="mb-3 text-sm font-bold text-[#2e1a08]">دسته‌بندی</h3>
+            <div className="flex flex-wrap gap-2">
+              {categoryOptions.map((opt) => {
+                const selected = catValue === opt.value;
+                return (
+                  <button
+                    key={opt.value || "all"}
+                    type="button"
+                    onClick={() => setCatValue(opt.value)}
+                    className={`rounded-full border px-3.5 py-2 text-xs font-medium transition-colors sm:text-sm ${
+                      selected
+                        ? "border-[#8a5419] bg-[#8a5419] text-white"
+                        : "border-[#ead7bb] bg-[#fffaf5] text-[#4e2e0e] hover:border-[#d4a96a]"
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                );
+              })}
+            </div>
+          </section>
         </div>
-      )}
-    </div>
+      </BottomSheet>
+    </>
   );
 }

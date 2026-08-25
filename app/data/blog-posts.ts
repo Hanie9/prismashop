@@ -1,55 +1,25 @@
 export type BlogPost = {
+  id: number;
   slug: string;
   title: string;
   excerpt: string;
   cover: string;
   category: string;
-  date: string;
-  readTime: string;
+  readTimeMinutes: number;
   content: string[];
+  published: boolean;
+  createdAt: string;
+  updatedAt: string;
 };
 
-export const blogPosts: BlogPost[] = [
-  {
-    slug: "calligraphy-wood-decor-guide",
-    title: "راهنمای انتخاب حروف کالیگرافی برای دکور منزل",
-    excerpt: "چطور اندازه، رنگ و جنس حروف کالیگرافی را متناسب با فضای خانه انتخاب کنیم.",
-    cover: "https://images.unsplash.com/photo-1455390582262-044cdead277a?w=900&h=500&fit=crop",
-    category: "حروف کالیگرافی",
-    date: "۱۴۰۵/۰۵/۱۰",
-    readTime: "۶ دقیقه",
-    content: [
-      "برای انتخاب حروف کالیگرافی، ابتدا محل نصب را مشخص کنید؛ دیوار اصلی پذیرایی، بالای کنسول یا ورودی خانه.",
-      "اگر فضا کوچک است از مدل‌های مینیمال و رنگ روشن استفاده کنید تا محیط شلوغ نشود.",
-      "هماهنگی رنگ چوب با مبلمان و کف‌پوش، جلوه نهایی را چند برابر می‌کند.",
-    ],
-  },
-  {
-    slug: "best-wood-finish-colors",
-    title: "بهترین رنگ‌ها برای پوشش نهایی چوب در سال جدید",
-    excerpt: "مقایسه رنگ‌های ووداستین، کیلر و روغن‌های محافظ برای انواع کارهای چوبی.",
-    cover: "https://images.unsplash.com/photo-1589939705384-5185137a7f0f?w=900&h=500&fit=crop",
-    category: "رنگ و پوشش",
-    date: "۱۴۰۵/۰۴/۲۲",
-    readTime: "۸ دقیقه",
-    content: [
-      "ووداستین برای حفظ بافت چوب گزینه مناسبی است و ظاهر طبیعی‌تری ایجاد می‌کند.",
-      "کیلر سطحی براق‌تر و مقاوم‌تر می‌دهد و برای وسایل پرکاربرد توصیه می‌شود.",
-      "برای فضای باز، از پوشش‌های ضد UV استفاده کنید تا رنگ چوب ماندگار بماند.",
-    ],
-  },
-  {
-    slug: "diy-wood-project-starter-pack",
-    title: "شروع پروژه DIY چوبی؛ چه ابزارهایی لازم دارید؟",
-    excerpt: "لیست کاربردی ابزارهای ضروری برای شروع نجاری خانگی با بودجه مناسب.",
-    cover: "https://images.unsplash.com/photo-1504148455328-c376907d081c?w=900&h=500&fit=crop",
-    category: "ابزار نجاری",
-    date: "۱۴۰۵/۰۳/۳۰",
-    readTime: "۵ دقیقه",
-    content: [
-      "برای شروع، یک دریل، پیچ‌گوشتی، متر، سنباده و اره دستی کافی است.",
-      "از ابزارهای با کیفیت متوسط رو به بالا استفاده کنید تا هم ایمن‌تر باشند و هم عمر بیشتری داشته باشند.",
-      "همیشه قبل از برش نهایی، یک برش آزمایشی روی قطعه ضایعاتی انجام دهید.",
-    ],
-  },
-];
+export function formatBlogDate(value: string) {
+  return new Date(value).toLocaleDateString("fa-IR", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+}
+
+export function formatReadTime(minutes: number) {
+  return `${minutes.toLocaleString("fa-IR")} دقیقه`;
+}

@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 
-/** Admin uses the same storefront login panel. */
+/** Admin uses the same storefront OTP login; redirect there. */
 export default function AdminLoginPage() {
   const router = useRouter();
   useEffect(() => {

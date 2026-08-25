@@ -15,7 +15,14 @@ def to_camel(string: str) -> str:
 
 
 def normalize_iran_mobile(value: str) -> str:
-    v = value.strip()
+    # Persian/Arabic digits → English
+    trans = str.maketrans("۰۱۲۳۴۵۶۷۸۹٠١٢٣٤٥٦٧٨٩", "01234567890123456789")
+    v = value.strip().translate(trans)
+    v = "".join(ch for ch in v if ch.isdigit())
+    if v.startswith("98") and len(v) == 12:
+        v = "0" + v[2:]
+    if v.startswith("9") and len(v) == 10:
+        v = "0" + v
     if not IRAN_MOBILE_RE.fullmatch(v):
         raise ValueError("شماره موبایل باید ۱۱ رقم و با ۰۹ شروع شود")
     return v
@@ -50,23 +57,58 @@ class CustomerRegister(CamelModel):
     first_name: str = Field(min_length=1, max_length=100)
     last_name: str = Field(min_length=1, max_length=100)
     mobile: str
-    email: EmailStr
-    password: str = Field(min_length=8, max_length=128)
+    signup_token: str = Field(min_length=16, max_length=128)
 
     @field_validator("mobile")
     @classmethod
     def validate_mobile(cls, v: str) -> str:
         return normalize_iran_mobile(v)
 
-    @field_validator("email")
-    @classmethod
-    def validate_email(cls, v: EmailStr) -> str:
-        return normalize_email(str(v))
 
-    @field_validator("password")
+class OtpRequest(CamelModel):
+    mobile: str
+    purpose: Literal["login", "signup", "admin"]
+
+    @field_validator("mobile")
     @classmethod
-    def validate_password(cls, v: str) -> str:
-        return normalize_password(v)
+    def validate_mobile(cls, v: str) -> str:
+        return normalize_iran_mobile(v)
+
+
+class OtpVerify(CamelModel):
+    mobile: str
+    code: str = Field(min_length=4, max_length=8)
+    purpose: Literal["login", "signup", "admin"]
+    remember_me: bool = False
+
+    @field_validator("mobile")
+    @classmethod
+    def validate_mobile(cls, v: str) -> str:
+        return normalize_iran_mobile(v)
+
+    @field_validator("code")
+    @classmethod
+    def validate_code(cls, v: str) -> str:
+        # Persian/Arabic digits → English
+        trans = str.maketrans("۰۱۲۳۴۵۶۷۸۹٠١٢٣٤٥٦٧٨٩", "01234567890123456789")
+        code = v.strip().translate(trans)
+        code = "".join(ch for ch in code if ch.isdigit())
+        if len(code) < 4 or len(code) > 8:
+            raise ValueError("کد تأیید نامعتبر است")
+        return code
+
+
+class OtpRequestResponse(CamelModel):
+    message: str
+    expires_in: int
+    # Only returned in local/dev to allow testing without SMS
+    dev_code: str | None = None
+
+
+class OtpVerifySignupResponse(CamelModel):
+    message: str
+    signup_token: str
+    mobile: str
 
 
 class CustomerLogin(CamelModel):
@@ -108,7 +150,7 @@ class CustomerOut(CamelModel):
     first_name: str
     last_name: str
     mobile: str
-    email: EmailStr
+    email: str | None = None
     province: str | None = None
     city: str | None = None
     address: str | None = None
@@ -138,9 +180,9 @@ class ChangePasswordRequest(CamelModel):
 class AdminOut(CamelModel):
     id: int
     email: EmailStr
+    mobile: str | None = None
     first_name: str
     last_name: str
-
 
 # ---------- Category ----------
 
@@ -192,6 +234,7 @@ class ProductCreate(CamelModel):
     discount_percent: int = Field(default=0, ge=0, le=100)
     images: list[str] = Field(min_length=1)
     is_new: bool = False
+    is_bestseller: bool = False
     stock: int = Field(default=10, ge=0)
     low_stock_threshold: int = Field(default=5, ge=1)
     description: str | None = None
@@ -208,6 +251,7 @@ class ProductUpdate(CamelModel):
     discount_percent: int | None = Field(default=None, ge=0, le=100)
     images: list[str] | None = None
     is_new: bool | None = None
+    is_bestseller: bool | None = None
     stock: int | None = Field(default=None, ge=0)
     low_stock_threshold: int | None = Field(default=None, ge=1)
     description: str | None = None
@@ -234,6 +278,7 @@ class ProductOut(CamelModel):
     rating: float
     review_count: int
     is_new: bool = False
+    is_bestseller: bool = False
     discount: int | None = None
     stock: int
     low_stock_threshold: int
@@ -477,3 +522,84 @@ class CartOut(CamelModel):
 
 class CartReplaceRequest(CamelModel):
     items: list[CartLine] = Field(default_factory=list)
+
+
+# ---------- Blog ----------
+
+
+class BlogPostCreate(CamelModel):
+    slug: str = Field(min_length=2, max_length=160)
+    title: str = Field(min_length=2, max_length=300)
+    excerpt: str = Field(min_length=10, max_length=2000)
+    cover: str = Field(min_length=1, max_length=500)
+    category: str = Field(default="حروف کالیگرافی", max_length=120)
+    read_time_minutes: int = Field(default=5, ge=1, le=120)
+    content: list[str] = Field(min_length=1)
+    published: bool = True
+
+
+class BlogPostUpdate(CamelModel):
+    slug: str | None = Field(default=None, min_length=2, max_length=160)
+    title: str | None = Field(default=None, min_length=2, max_length=300)
+    excerpt: str | None = Field(default=None, min_length=10, max_length=2000)
+    cover: str | None = Field(default=None, min_length=1, max_length=500)
+    category: str | None = Field(default=None, max_length=120)
+    read_time_minutes: int | None = Field(default=None, ge=1, le=120)
+    content: list[str] | None = None
+    published: bool | None = None
+
+
+class BlogPostOut(CamelModel):
+    id: int
+    slug: str
+    title: str
+    excerpt: str
+    cover: str
+    category: str
+    read_time_minutes: int
+    content: list[str]
+    published: bool
+    created_at: datetime
+    updated_at: datetime
+
+
+# ---------- Contact ----------
+
+
+class ContactMessageCreate(CamelModel):
+    first_name: str = Field(min_length=1, max_length=100)
+    last_name: str = Field(min_length=1, max_length=100)
+    mobile: str
+    email: str
+    subject: str = Field(min_length=2, max_length=300)
+    message: str = Field(min_length=5, max_length=5000)
+
+    @field_validator("mobile")
+    @classmethod
+    def validate_mobile(cls, value: str) -> str:
+        return normalize_iran_mobile(value)
+
+    @field_validator("email")
+    @classmethod
+    def validate_email(cls, value: str) -> str:
+        return normalize_email(value)
+
+
+class ContactMessageUpdate(CamelModel):
+    is_read: bool | None = None
+    reply: str | None = Field(default=None, max_length=5000)
+
+
+class ContactMessageOut(CamelModel):
+    id: int
+    user_id: int | None = None
+    first_name: str
+    last_name: str
+    mobile: str
+    email: str
+    subject: str
+    message: str
+    reply: str | None = None
+    replied_at: datetime | None = None
+    is_read: bool = False
+    created_at: datetime

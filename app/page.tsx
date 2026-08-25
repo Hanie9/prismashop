@@ -9,11 +9,7 @@ import { api, type FeaturedReview } from "./lib/api";
 export default function Home() {
   const { getActiveProducts, categories, products: allProducts } = useShop();
   const products = getActiveProducts();
-  const featuredProducts = [
-    ...products.filter((product) => product.categoryId === "calligraphy"),
-    ...products.filter((product) => product.categoryId !== "calligraphy"),
-  ].slice(0, 8);
-  const newProducts = products.filter((p) => p.isNew);
+  const featuredProducts = products.filter((p) => p.isBestseller).slice(0, 8);
   const [testimonials, setTestimonials] = useState<FeaturedReview[]>([]);
 
   useEffect(() => {
@@ -191,15 +187,21 @@ export default function Home() {
             <h2 className="text-xl sm:text-2xl xl:text-[1.75rem] font-bold text-[#2e1a08]">محصولات پرفروش</h2>
             <p className="text-[#a96c20] text-sm mt-1">منتخب‌های پرفروش با تمرکز بر حروف کالیگرافی</p>
           </div>
-          <Link href="/products" className="self-start text-sm text-[#a96c20] hover:text-[#6d4014] font-medium border border-[#e8cfa8] hover:border-[#a96c20] px-4 py-2 rounded-full transition-all">
-            همه محصولات ←
+          <Link href="/products?sort=bestseller" className="self-start text-sm text-[#a96c20] hover:text-[#6d4014] font-medium border border-[#e8cfa8] hover:border-[#a96c20] px-4 py-2 rounded-full transition-all">
+            همه پرفروش‌ها ←
           </Link>
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-5 xl:gap-6">
-          {featuredProducts.map((product) => (
-            <ProductCard key={product.id} product={product} />
-          ))}
+          {featuredProducts.length > 0 ? (
+            featuredProducts.map((product) => (
+              <ProductCard key={product.id} product={product} />
+            ))
+          ) : (
+            <p className="col-span-full text-sm text-[#a96c20]">
+              هنوز محصولی به‌عنوان پرفروش انتخاب نشده است.
+            </p>
+          )}
         </div>
       </section>
 
@@ -247,24 +249,6 @@ export default function Home() {
               </div>
             ))}
           </div>
-        </div>
-      </section>
-
-      {/* New products */}
-      <section className="py-12 sm:py-16 max-w-7xl mx-auto px-4 lg:px-6 xl:px-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6 sm:mb-8">
-          <div>
-            <h2 className="text-xl sm:text-2xl xl:text-[1.75rem] font-bold text-[#2e1a08]">جدیدترین محصولات</h2>
-            <p className="text-[#a96c20] text-sm mt-1">تازه‌ترین اضافات فروشگاه</p>
-          </div>
-          <Link href="/products?sort=newest" className="self-start text-sm text-[#a96c20] hover:text-[#6d4014] font-medium border border-[#e8cfa8] hover:border-[#a96c20] px-4 py-2 rounded-full transition-all">
-            همه محصولات جدید ←
-          </Link>
-        </div>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-5 xl:gap-6">
-          {newProducts.map((product) => (
-            <ProductCard key={product.id} product={product} />
-          ))}
         </div>
       </section>
 

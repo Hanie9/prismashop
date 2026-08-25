@@ -2,13 +2,83 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import PageLoader from "../components/PageLoader";
 import PriceText from "../components/PriceText";
 import { useAuth } from "../components/SessionProvider";
 import { useCart } from "../components/CartProvider";
 import { useShop } from "../components/ShopProvider";
 import { api } from "../lib/api";
+
+const UNDO_MS = 5000;
+
+type PendingUndo = {
+  id: number;
+  qty: number;
+  name: string;
+};
+
+function UndoRemoveToast({
+  pending,
+  onUndo,
+  onDismiss,
+}: {
+  pending: PendingUndo;
+  onUndo: () => void;
+  onDismiss: () => void;
+}) {
+  const [progress, setProgress] = useState(100);
+  const onDismissRef = useRef(onDismiss);
+  const onUndoRef = useRef(onUndo);
+  onDismissRef.current = onDismiss;
+  onUndoRef.current = onUndo;
+
+  useEffect(() => {
+    setProgress(100);
+    const start = performance.now();
+    let raf = 0;
+
+    const tick = (now: number) => {
+      const elapsed = now - start;
+      setProgress(Math.max(0, 100 - (elapsed / UNDO_MS) * 100));
+      if (elapsed >= UNDO_MS) {
+        onDismissRef.current();
+        return;
+      }
+      raf = requestAnimationFrame(tick);
+    };
+
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [pending.id, pending.qty]);
+
+  return (
+    <div
+      className="pointer-events-none fixed inset-x-0 bottom-5 z-[90] flex justify-center px-4 sm:bottom-8"
+      role="status"
+      aria-live="polite"
+    >
+      <div className="pointer-events-auto w-full max-w-sm overflow-hidden rounded-2xl border border-[#ead7bb]/90 bg-[#2e1a08]/92 shadow-[0_16px_40px_rgba(46,26,8,0.28)] backdrop-blur-md">
+        <div className="flex items-center gap-3 px-3.5 py-2.5 sm:px-4">
+          <div className="min-w-0 flex-1">
+            <p className="text-[11px] text-[#e8cfa8]/80">از سبد حذف شد</p>
+            <p className="truncate text-xs font-medium text-white sm:text-sm">{pending.name}</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => onUndoRef.current()}
+            className="shrink-0 rounded-full bg-white/95 px-3.5 py-1.5 text-xs font-semibold text-[#4e2e0e] transition-colors hover:bg-white"
+          >
+            بازگردانی
+          </button>
+        </div>
+        <div className="h-[2px] bg-white/10">
+          <div className="h-full origin-right bg-[#d4a96a]" style={{ width: `${progress}%` }} />
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function ClearCartDialog({
   open,
@@ -156,11 +226,13 @@ function LoginPromptDialog({
 export default function CartPage() {
   const router = useRouter();
   const { isLoggedIn, ready } = useAuth();
-  const { items, hydrated: cartHydrated, updateQty, removeItem, clearCart, getAvailableStock } = useCart();
+  const { items, hydrated: cartHydrated, addItem, updateQty, removeItem, clearCart, getAvailableStock } =
+    useCart();
   const { getProduct, refreshShop } = useShop();
   const [stockMsg, setStockMsg] = useState("");
   const [clearDialogOpen, setClearDialogOpen] = useState(false);
   const [loginPromptOpen, setLoginPromptOpen] = useState(false);
+  const [pendingUndo, setPendingUndo] = useState<PendingUndo | null>(null);
 
   const rows = useMemo(
     () =>
@@ -171,6 +243,18 @@ export default function CartPage() {
   );
 
   const subtotal = rows.reduce((sum, r) => sum + (r.product?.price ?? 0) * r.qty, 0);
+
+  const handleRemoveItem = (id: number, qty: number, name: string) => {
+    setPendingUndo({ id, qty, name });
+    removeItem(id);
+  };
+
+  const handleUndoRemove = () => {
+    if (!pendingUndo) return;
+    const { id, qty } = pendingUndo;
+    setPendingUndo(null);
+    addItem(id, qty);
+  };
 
   const goCheckout = async () => {
     if (!ready) return;
@@ -299,7 +383,9 @@ export default function CartPage() {
                       {row.qty > 1 && (
                         <button
                           type="button"
-                          onClick={() => removeItem(row.id)}
+                          onClick={() =>
+                            handleRemoveItem(row.id, row.qty, row.product?.name ?? "محصول")
+                          }
                           className="shrink-0 text-xs text-red-600 hover:underline"
                         >
                           حذف
@@ -313,7 +399,9 @@ export default function CartPage() {
                             type="button"
                             aria-label="حذف از سبد"
                             className="group relative flex h-9 w-9 items-center justify-center rounded-s-xl text-red-600 hover:bg-red-50"
-                            onClick={() => removeItem(row.id)}
+                            onClick={() =>
+                              handleRemoveItem(row.id, row.qty, row.product?.name ?? "محصول")
+                            }
                           >
                             <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                               <path d="M3 6h18" />
@@ -440,6 +528,7 @@ export default function CartPage() {
         open={clearDialogOpen}
         onCancel={() => setClearDialogOpen(false)}
         onConfirm={() => {
+          setPendingUndo(null);
           clearCart();
           setClearDialogOpen(false);
         }}
@@ -452,6 +541,13 @@ export default function CartPage() {
           router.push(`/auth/login?next=${encodeURIComponent("/cart")}`);
         }}
       />
+      {pendingUndo && (
+        <UndoRemoveToast
+          pending={pendingUndo}
+          onUndo={handleUndoRemove}
+          onDismiss={() => setPendingUndo(null)}
+        />
+      )}
     </div>
   );
 }

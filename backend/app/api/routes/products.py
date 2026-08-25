@@ -45,7 +45,7 @@ def list_products(
     sale: bool = False,
     sort: str = Query(
         default="featured",
-        description="featured | cheap | expensive | newest | bestseller",
+        description="featured | cheap | expensive | bestseller",
     ),
     active_only: bool = True,
     skip: int = Query(default=0, ge=0),
@@ -74,10 +74,8 @@ def list_products(
         query = query.order_by(Product.price.asc())
     elif sort == "expensive":
         query = query.order_by(Product.price.desc())
-    elif sort == "newest":
-        query = query.order_by(Product.is_new.desc(), Product.id.desc())
     elif sort == "bestseller":
-        query = query.order_by(Product.review_count.desc())
+        query = query.order_by(Product.is_bestseller.desc(), Product.id.asc())
     else:
         query = query.order_by(Product.id.asc())
 

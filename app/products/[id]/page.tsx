@@ -143,8 +143,10 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                   ناموجود
                 </span>
               ) : isLowStock(product) ? (
-                <span className="text-amber-700 text-sm font-medium border border-amber-200 bg-amber-50 px-2 py-0.5 rounded-full">
-                  موجودی کم — {stock.toLocaleString("fa-IR")} عدد
+                <span className="rounded-full bg-[#f97316] px-2.5 py-0.5 text-sm font-bold text-white">
+                  {stock === 1
+                    ? "یک عدد مانده است"
+                    : `${stock.toLocaleString("fa-IR")} عدد مانده است`}
                 </span>
               ) : (
                 <span className="text-green-600 text-sm font-medium border border-green-200 bg-green-50 px-2 py-0.5 rounded-full">

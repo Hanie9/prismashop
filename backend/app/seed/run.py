@@ -25,6 +25,7 @@ def seed(*, force: bool = False) -> None:
                 db.add(
                     AdminUser(
                         email=settings.ADMIN_EMAIL.lower(),
+                        mobile=settings.ADMIN_MOBILE,
                         password_hash=hash_password(settings.ADMIN_PASSWORD),
                         first_name="مدیر",
                         last_name="پریسما",
@@ -33,6 +34,10 @@ def seed(*, force: bool = False) -> None:
                 db.commit()
                 print("Admin user created. Catalog already present.")
             else:
+                if not admin.mobile:
+                    admin.mobile = settings.ADMIN_MOBILE
+                    db.add(admin)
+                    db.commit()
                 print("Database already seeded. Use --force to reseed.")
             return
 
@@ -64,6 +69,7 @@ def seed(*, force: bool = False) -> None:
                     rating=product["rating"],
                     review_count=product["review_count"],
                     is_new=product["is_new"],
+                    is_bestseller=product.get("is_bestseller", False),
                     discount=product["discount"],
                     stock=product["stock"],
                     low_stock_threshold=product["low_stock_threshold"],
@@ -89,6 +95,7 @@ def seed(*, force: bool = False) -> None:
         db.add(
             AdminUser(
                 email=settings.ADMIN_EMAIL.lower(),
+                mobile=settings.ADMIN_MOBILE,
                 password_hash=hash_password(settings.ADMIN_PASSWORD),
                 first_name="مدیر",
                 last_name="پریسما",
@@ -97,7 +104,7 @@ def seed(*, force: bool = False) -> None:
 
         db.commit()
         print("Seed completed successfully.")
-        print(f"Admin: {settings.ADMIN_EMAIL} / {settings.ADMIN_PASSWORD}")
+        print(f"Admin mobile: {settings.ADMIN_MOBILE}")
 
 
 if __name__ == "__main__":

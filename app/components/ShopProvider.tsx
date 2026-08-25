@@ -156,6 +156,7 @@ export function ShopProvider({ children }: { children: ReactNode }) {
         discountPercent: product.discount ?? 0,
         images: product.images?.length ? product.images : [product.image],
         isNew: product.isNew ?? false,
+        isBestseller: product.isBestseller ?? false,
         stock: product.stock,
         lowStockThreshold: product.lowStockThreshold,
         description: product.description,
@@ -179,6 +180,7 @@ export function ShopProvider({ children }: { children: ReactNode }) {
     if (patch.discount !== undefined) body.discountPercent = patch.discount;
     if (patch.images !== undefined) body.images = patch.images;
     if (patch.isNew !== undefined) body.isNew = patch.isNew;
+    if (patch.isBestseller !== undefined) body.isBestseller = patch.isBestseller;
     if (patch.stock !== undefined) body.stock = patch.stock;
     if (patch.lowStockThreshold !== undefined)
       body.lowStockThreshold = patch.lowStockThreshold;

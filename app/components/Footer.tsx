@@ -74,20 +74,6 @@ export default function Footer() {
                 <div>۰۲۱-۱۲۳۴۵۶۷۸</div>
                 <div>info@prismashop.ir</div>
               </div>
-              <form action="/blog" method="get" className="mt-3 flex gap-2">
-                <input
-                  name="q"
-                  type="email"
-                  placeholder="ایمیل شما"
-                  className="h-10 flex-1 min-w-0 rounded-full border border-[#5d3814] bg-[#2a180a] px-4 text-xs text-white placeholder:text-[#b98a53] focus:outline-none focus:border-[#c2883a]"
-                />
-                <button
-                  type="submit"
-                  className="h-10 rounded-full bg-[#f3d6af] px-4 text-xs font-bold text-[#4e2e0e] hover:bg-white whitespace-nowrap"
-                >
-                  عضویت
-                </button>
-              </form>
             </div>
           </div>
         </div>

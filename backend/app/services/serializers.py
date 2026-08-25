@@ -28,6 +28,7 @@ def serialize_product(product: Product) -> ProductOut:
         rating=product.rating,
         review_count=product.review_count,
         is_new=product.is_new,
+        is_bestseller=bool(getattr(product, "is_bestseller", False)),
         discount=product.discount,
         stock=product.stock,
         low_stock_threshold=product.low_stock_threshold,

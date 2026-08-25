@@ -11,7 +11,10 @@ class AdminUser(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     email: Mapped[str] = mapped_column(String(255), unique=True, index=True)
-    password_hash: Mapped[str] = mapped_column(String(255))
+    mobile: Mapped[str | None] = mapped_column(
+        String(11), unique=True, nullable=True, index=True
+    )
+    password_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
     first_name: Mapped[str] = mapped_column(String(100), default="مدیر")
     last_name: Mapped[str] = mapped_column(String(100), default="سایت")
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)

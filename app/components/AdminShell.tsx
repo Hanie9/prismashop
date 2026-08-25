@@ -17,6 +17,8 @@ const links = [
   { href: "/admin/orders", label: "سفارش‌ها" },
   { href: "/admin/customers", label: "مشتریان" },
   { href: "/admin/reviews", label: "نظرات" },
+  { href: "/admin/blog", label: "بلاگ" },
+  { href: "/admin/messages", label: "پیام‌ها" },
   { href: "/admin/discounts", label: "تخفیف‌ها" },
   { href: "/admin/inventory", label: "موجودی" },
 ];

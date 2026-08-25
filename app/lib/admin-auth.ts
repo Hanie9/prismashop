@@ -1,27 +1,7 @@
 import { api, setStoredSessionId } from "./api";
 
-export const ADMIN_CREDENTIALS = {
-  email: "admin@prismashop.ir",
-  password: "admin123",
-} as const;
-
 export const ADMIN_SESSION_KEY = "prismashop-admin-session";
-
-export function normalizeAdminEmail(value: string) {
-  return value.trim().toLowerCase();
-}
-
-export function normalizeAdminPassword(value: string) {
-  return value.trim();
-}
-
-/** @deprecated Prefer API admin login; kept for UI defaults only */
-export function isAdminCredentials(email: string, password: string) {
-  return (
-    normalizeAdminEmail(email) === ADMIN_CREDENTIALS.email &&
-    normalizeAdminPassword(password) === ADMIN_CREDENTIALS.password
-  );
-}
+export const ADMIN_MOBILE_DEFAULT = "09355191020";
 
 export function setAdminSession() {
   if (typeof window === "undefined") return;
@@ -38,8 +18,8 @@ export function getAdminSession(): boolean {
   return window.localStorage.getItem(ADMIN_SESSION_KEY) === "1";
 }
 
-export async function loginAdmin(email: string, password: string) {
-  const session = await api.adminLogin(email, password);
+export async function loginAdminWithOtp(mobile: string, code: string, rememberMe = true) {
+  const session = await api.verifyOtpAdmin(mobile, code, rememberMe);
   setStoredSessionId(session.sessionId);
   setAdminSession();
   return session;
