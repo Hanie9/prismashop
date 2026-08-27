@@ -10,6 +10,8 @@ from app.models.otp_challenge import OtpChallenge
 from app.models.product import Product
 from app.models.review import Review
 from app.models.session import AuthSession
+from app.models.site_page import SitePage
+from app.models.site_setting import SiteSetting
 from app.models.user import User
 from app.models.wishlist import WishlistItem
 
@@ -27,6 +29,8 @@ __all__ = [
     "OtpChallenge",
     "Product",
     "Review",
+    "SitePage",
+    "SiteSetting",
     "User",
     "WishlistItem",
 ]

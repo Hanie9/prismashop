@@ -9,6 +9,7 @@ import PageLoader from "../components/PageLoader";
 import PriceText from "../components/PriceText";
 import SearchableSelect from "../components/SearchableSelect";
 import { useShop } from "../components/ShopProvider";
+import { useSiteSettings } from "../components/SiteSettingsProvider";
 import { api } from "../lib/api";
 import { getCitiesForProvince, IRAN_PROVINCE_NAMES } from "../lib/iran-locations";
 import { isValidIranMobile } from "../lib/validation";
@@ -50,6 +51,7 @@ export default function CheckoutPage() {
   const { ready, isLoggedIn, customer, admin, refresh } = useAuth();
   const { items, hydrated: cartHydrated, clearCart, getAvailableStock } = useCart();
   const { getProduct, placeOrder, refreshShop } = useShop();
+  const { settings } = useSiteSettings();
   const [form, setForm] = useState<CheckoutForm>(loadFormDraft);
   const [errors, setErrors] = useState<Partial<Record<keyof CheckoutForm, string>>>({});
   const [trackingCode, setTrackingCode] = useState("");
@@ -131,7 +133,8 @@ export default function CheckoutPage() {
   );
 
   const subtotal = rows.reduce((sum, row) => sum + (row.product?.price ?? 0) * row.qty, 0);
-  const total = Math.max(0, subtotal - discount);
+  const shippingCost = Math.max(0, settings?.shippingCost ?? 0);
+  const total = Math.max(0, subtotal - discount) + shippingCost;
 
   useEffect(() => {
     if (!appliedCode || subtotal <= 0) {
@@ -557,6 +560,14 @@ export default function CheckoutPage() {
                   <PriceText amount={subtotal} />
                 </span>
               </div>
+              {shippingCost > 0 && (
+                <div className="flex justify-between">
+                  <span>هزینه ارسال</span>
+                  <span>
+                    <PriceText amount={shippingCost} />
+                  </span>
+                </div>
+              )}
               {discount > 0 && (
                 <div className="flex justify-between text-green-700">
                   <span>تخفیف</span>

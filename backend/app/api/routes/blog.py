@@ -124,7 +124,7 @@ def admin_update_blog_post(
     if not post:
         raise HTTPException(status_code=404, detail="مقاله یافت نشد")
 
-    data = payload.model_dump(exclude_unset=True)
+    data = payload.updates()
 
     if "slug" in data and data["slug"] is not None:
         slug = _normalize_slug(data["slug"])

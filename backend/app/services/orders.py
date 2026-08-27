@@ -6,11 +6,13 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from app.models.coupon import Coupon
+from app.models.admin_user import AdminUser
 from app.models.order import Order, OrderItem
 from app.models.product import Product
 from app.models.user import User
 from app.schemas import CheckoutRequest
 from app.services.pricing import calc_coupon_discount, calc_shipping
+from app.services.site import get_or_create_settings
 from app.services.serializers import serialize_order
 
 
@@ -57,6 +59,7 @@ def create_order(
     payload: CheckoutRequest,
     *,
     user: User | None = None,
+    admin: AdminUser | None = None,
 ) -> Order:
     # Lock products for update to avoid oversell
     product_ids = [item.product_id for item in payload.items]
@@ -113,7 +116,7 @@ def create_order(
                 ),
             )
 
-    shipping = calc_shipping(subtotal)
+    shipping = calc_shipping(get_or_create_settings(db).shipping_cost)
     total = max(0, subtotal - discount + shipping)
 
     order_id = f"ord-{int(time.time() * 1000)}"
@@ -125,6 +128,7 @@ def create_order(
         tracking_code=tracking,
         status="pending",
         user_id=user.id if user else None,
+        admin_id=admin.id if admin else None,
         customer_first_name=customer.first_name.strip(),
         customer_last_name=customer.last_name.strip(),
         customer_phone=customer.phone,

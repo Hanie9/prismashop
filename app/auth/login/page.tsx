@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import OtpCodeInput from "../../components/OtpCodeInput";
 import { useAuth } from "../../components/SessionProvider";
+import { useSiteSettings } from "../../components/SiteSettingsProvider";
 import { setAdminSession } from "../../lib/admin-auth";
 import {
   api,
@@ -23,6 +24,7 @@ function normalizeMobile(value: string) {
 export default function LoginPage() {
   const router = useRouter();
   const { refresh } = useAuth();
+  const { settings } = useSiteSettings();
   const [phase, setPhase] = useState<"mobile" | "otp">("mobile");
   const [form, setForm] = useState({
     mobile: "",
@@ -154,7 +156,7 @@ export default function LoginPage() {
     <div className="relative min-h-screen overflow-hidden">
       <Image
         src="/images/calligraphy/calligraphy-8.jpg"
-        alt="حروف کالیگرافی چوبی پریسما شاپ"
+        alt=""
         fill
         priority
         className="object-cover"
@@ -172,8 +174,10 @@ export default function LoginPage() {
               </svg>
             </div>
             <div>
-              <div className="text-lg font-black text-white">پریسما شاپ</div>
-              <div className="text-xs text-[#e3c091]">دکور و حروف کالیگرافی</div>
+              <div className="text-lg font-black text-white">{settings?.brandName}</div>
+              {settings?.brandSubtitle && (
+                <div className="text-xs text-[#e3c091]">{settings.brandSubtitle}</div>
+              )}
             </div>
           </Link>
 

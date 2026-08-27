@@ -7,6 +7,7 @@ import ProductCard from "../../components/ProductCard";
 import ProductReviewsPanel from "../../components/ProductReviewsPanel";
 import { useCart } from "../../components/CartProvider";
 import { useShop } from "../../components/ShopProvider";
+import { useSiteSettings } from "../../components/SiteSettingsProvider";
 import { useWishlist } from "../../components/WishlistProvider";
 import { getProductImages } from "../../lib/product-images";
 import { filledSpecs } from "../../lib/product-content";
@@ -15,6 +16,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
   const { id } = use(params);
   const { addItem, getItemQty, getAvailableStock } = useCart();
   const { getProduct, getActiveProducts, isLowStock } = useShop();
+  const { settings } = useSiteSettings();
   const { isWishlisted, toggleItem } = useWishlist();
   const products = getActiveProducts();
   const product = getProduct(Number(id));
@@ -64,6 +66,12 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
     : 0;
   const outOfStock = stock <= 0;
   const remaining = Math.max(0, stock - qtyInCart);
+  const detailParagraphs = product.detailParagraphs?.length
+    ? product.detailParagraphs
+    : product.description
+      ? [product.description]
+      : [];
+  const highlights = product.highlights ?? [];
 
   return (
     <div className="min-h-screen bg-[#faf6ee]">
@@ -177,10 +185,11 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
             </div>
 
             {/* Short desc */}
-            <p className="text-sm text-[#6d4014] leading-7 mb-6 border-b border-[#f5e9d5] pb-6">
-              {product.description ||
-                "این محصول از بهترین چوب‌های طبیعی ایرانی ساخته شده و برای استفاده در هنر دکوپاژ، نجاری خانگی و دکوراسیون داخلی مناسب است."}
-            </p>
+            {product.description && (
+              <p className="text-sm text-[#6d4014] leading-7 mb-6 border-b border-[#f5e9d5] pb-6">
+                {product.description}
+              </p>
+            )}
 
             {/* Quantity */}
             <div className="flex items-center gap-4 mb-5">
@@ -274,7 +283,9 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                   {product.category}
                 </Link>
               </div>
-              <div className="flex flex-wrap gap-2"><span className="font-medium text-[#4e2e0e]">ارسال:</span> ۲ تا ۵ روز کاری</div>
+              {settings?.shippingTimeText && (
+                <div className="flex flex-wrap gap-2">{settings.shippingTimeText}</div>
+              )}
             </div>
           </div>
         </div>
@@ -304,42 +315,23 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
           <div className="p-5 sm:p-8">
             {activeTab === "desc" && (
               <div className="text-sm text-[#4e2e0e] leading-8 max-w-3xl">
-                {(product.detailParagraphs?.length
-                  ? product.detailParagraphs
-                  : [
-                      product.description ||
-                        "این محصول از چوب درجه یک ایرانی با دقت و مهارت بالا ساخته شده است. سطح محصول کاملاً صاف و آماده رنگ‌آمیزی یا دکوپاژ است.",
-                    ]
-                ).map((paragraph) => (
+                {detailParagraphs.map((paragraph) => (
                   <p key={paragraph.slice(0, 48)} className="mb-4">
                     {paragraph}
                   </p>
                 ))}
-                {(product.highlights?.length
-                  ? product.highlights
-                  : [
-                      "هنر دکوپاژ و دکوپاژ روی چوب",
-                      "نجاری خانگی و پروژه‌های DIY",
-                      "دکوراسیون داخلی منزل و محل کار",
-                      "کلاس‌های هنری و کارگاه‌های آموزشی",
-                    ]
-                ).length > 0 && (
+                {highlights.length > 0 && (
                   <ul className="list-none space-y-2 mr-4">
-                    {(product.highlights?.length
-                      ? product.highlights
-                      : [
-                          "هنر دکوپاژ و دکوپاژ روی چوب",
-                          "نجاری خانگی و پروژه‌های DIY",
-                          "دکوراسیون داخلی منزل و محل کار",
-                          "کلاس‌های هنری و کارگاه‌های آموزشی",
-                        ]
-                    ).map((item) => (
+                    {highlights.map((item) => (
                       <li key={item} className="flex items-center gap-2">
                         <span className="w-2 h-2 bg-[#d4a96a] rounded-full shrink-0" />
                         {item}
                       </li>
                     ))}
                   </ul>
+                )}
+                {detailParagraphs.length === 0 && highlights.length === 0 && (
+                  <p className="text-[#a96c20]">هنوز توضیحی برای این محصول ثبت نشده است.</p>
                 )}
               </div>
             )}

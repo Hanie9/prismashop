@@ -121,7 +121,7 @@ def admin_update_contact_message(
     if not row:
         raise HTTPException(status_code=404, detail="پیام یافت نشد")
 
-    data = payload.model_dump(exclude_unset=True)
+    data = payload.updates()
     if "is_read" in data and data["is_read"] is not None:
         row.is_read = bool(data["is_read"])
 

@@ -9,6 +9,7 @@ import PageLoader from "./PageLoader";
 import PullToRefresh from "./PullToRefresh";
 import { useAuth } from "./SessionProvider";
 import { useShop } from "./ShopProvider";
+import { useSiteSettings } from "./SiteSettingsProvider";
 
 const links = [
   { href: "/admin", label: "داشبورد", exact: true },
@@ -21,14 +22,17 @@ const links = [
   { href: "/admin/messages", label: "پیام‌ها" },
   { href: "/admin/discounts", label: "تخفیف‌ها" },
   { href: "/admin/inventory", label: "موجودی" },
+  { href: "/admin/settings", label: "تنظیمات سایت" },
 ];
 
 function AdminLogoutDialog({
   open,
+  brandName,
   onCancel,
   onConfirm,
 }: {
   open: boolean;
+  brandName: string;
   onCancel: () => void;
   onConfirm: () => void;
 }) {
@@ -71,7 +75,7 @@ function AdminLogoutDialog({
         </h2>
         <p className="mb-6 text-sm leading-7 text-[#6d4014]">
           آیا مطمئن هستید که می‌خواهید از پنل مدیریت{" "}
-          <span className="font-bold text-[#4e2e0e]">پریسما شاپ</span> خارج شوید؟
+          <span className="font-bold text-[#4e2e0e]">{brandName}</span> خارج شوید؟
         </p>
         <div className="flex flex-col-reverse gap-2 sm:flex-row sm:gap-3">
           <button
@@ -98,6 +102,8 @@ export default function AdminShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { orders, products, hydrated: shopHydrated } = useShop();
+  const { settings } = useSiteSettings();
+  const brandName = settings?.brandName ?? "";
   const { isAdmin, ready: authReady, refresh } = useAuth();
   const [ready, setReady] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -176,7 +182,7 @@ export default function AdminShell({ children }: { children: ReactNode }) {
         <aside className="hidden w-64 shrink-0 border-l border-[#ead7bb] bg-[#1f1207] p-5 text-[#f3e2c8] lg:flex lg:flex-col">
           <div className="mb-8">
             <p className="text-lg font-black text-white">پنل ادمین</p>
-            <p className="mt-1 text-xs text-[#cfa56c]">پریسما شاپ</p>
+            <p className="mt-1 text-xs text-[#cfa56c]">{brandName}</p>
           </div>
           <div className="flex-1">
             <nav className="space-y-1">
@@ -292,6 +298,7 @@ export default function AdminShell({ children }: { children: ReactNode }) {
 
       <AdminLogoutDialog
         open={logoutDialogOpen}
+        brandName={brandName}
         onCancel={() => setLogoutDialogOpen(false)}
         onConfirm={handleLogout}
       />

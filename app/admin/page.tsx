@@ -2,9 +2,11 @@
 
 import Link from "next/link";
 import { useShop } from "../components/ShopProvider";
+import { useSiteSettings } from "../components/SiteSettingsProvider";
 
 export default function AdminDashboardPage() {
   const { products, categories, coupons, orders, isLowStock } = useShop();
+  const { settings } = useSiteSettings();
 
   const activeProducts = products.filter((p) => p.active);
   const outOfStock = products.filter((p) => p.stock <= 0);
@@ -26,7 +28,9 @@ export default function AdminDashboardPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-xl font-black text-[#2e1a08] sm:text-2xl">داشبورد</h1>
-        <p className="mt-1 text-sm text-[#6d4014]">نمای کلی فروشگاه پریسما شاپ</p>
+        <p className="mt-1 text-sm text-[#6d4014]">
+          نمای کلی فروشگاه {settings?.brandName}
+        </p>
       </div>
 
       <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">

@@ -95,7 +95,7 @@ def update_coupon(
     if not coupon:
         raise HTTPException(status_code=404, detail="کد تخفیف یافت نشد")
 
-    data = payload.model_dump(exclude_unset=True)
+    data = payload.updates()
     new_type = data.get("type", coupon.type)
     new_value = data.get("value", coupon.value)
     _validate_coupon_values(new_type, new_value)

@@ -49,6 +49,10 @@ class CamelModel(BaseModel):
         serialize_by_alias=True,
     )
 
+    def updates(self) -> dict:
+        """Provided fields keyed by python/DB names (not camelCase aliases)."""
+        return self.model_dump(exclude_unset=True, by_alias=False)
+
 
 # ---------- Auth ----------
 
@@ -603,3 +607,118 @@ class ContactMessageOut(CamelModel):
     replied_at: datetime | None = None
     is_read: bool = False
     created_at: datetime
+
+
+# ---------- Site settings & pages ----------
+
+
+class SocialLink(CamelModel):
+    label: str = Field(min_length=1, max_length=80)
+    href: str = Field(min_length=1, max_length=300)
+    icon: str = Field(default="link", max_length=40)
+
+
+class SiteStat(CamelModel):
+    value: str = Field(min_length=1, max_length=40)
+    label: str = Field(min_length=1, max_length=120)
+
+
+class SiteFeature(CamelModel):
+    title: str = Field(min_length=1, max_length=160)
+    description: str = Field(default="", max_length=600)
+    icon: str = Field(default="sparkle", max_length=40)
+
+
+class PromoBanner(CamelModel):
+    enabled: bool = True
+    badge: str = Field(default="", max_length=120)
+    title: str = Field(default="", max_length=200)
+    description: str = Field(default="", max_length=600)
+    cta_label: str = Field(default="", max_length=120)
+    cta_href: str = Field(default="", max_length=300)
+    images: list[str] = Field(default_factory=list)
+
+
+class SiteSettingsOut(CamelModel):
+    brand_name: str
+    brand_subtitle: str
+    brand_tagline: str
+    copyright_text: str
+    contact_phone: str
+    contact_phone_link: str
+    contact_email: str
+    contact_address: str
+    working_hours: str
+    social_links: list[SocialLink]
+    hero_images: list[str]
+    stats: list[SiteStat]
+    features: list[SiteFeature]
+    footer_badges: list[str]
+    promo_banner: PromoBanner
+    shipping_time_text: str
+    warranty_text: str
+    origin_country: str
+    product_highlights: list[str]
+    free_shipping_threshold: int
+    shipping_cost: int
+
+
+class SiteSettingsUpdate(CamelModel):
+    brand_name: str | None = Field(default=None, min_length=1, max_length=120)
+    brand_subtitle: str | None = Field(default=None, max_length=160)
+    brand_tagline: str | None = Field(default=None, max_length=600)
+    copyright_text: str | None = Field(default=None, max_length=300)
+    contact_phone: str | None = Field(default=None, max_length=60)
+    contact_phone_link: str | None = Field(default=None, max_length=60)
+    contact_email: str | None = Field(default=None, max_length=160)
+    contact_address: str | None = Field(default=None, max_length=600)
+    working_hours: str | None = Field(default=None, max_length=200)
+    social_links: list[SocialLink] | None = None
+    hero_images: list[str] | None = None
+    stats: list[SiteStat] | None = None
+    features: list[SiteFeature] | None = None
+    footer_badges: list[str] | None = None
+    promo_banner: PromoBanner | None = None
+    shipping_time_text: str | None = Field(default=None, max_length=200)
+    warranty_text: str | None = Field(default=None, max_length=200)
+    origin_country: str | None = Field(default=None, max_length=120)
+    product_highlights: list[str] | None = None
+    free_shipping_threshold: int | None = Field(default=None, ge=0)
+    shipping_cost: int | None = Field(default=None, ge=0)
+
+
+class PageSection(CamelModel):
+    heading: str = Field(default="", max_length=200)
+    paragraphs: list[str] = Field(default_factory=list)
+
+
+class FaqItem(CamelModel):
+    question: str = Field(min_length=1, max_length=300)
+    answer: str = Field(min_length=1, max_length=3000)
+
+
+class SitePageOut(CamelModel):
+    id: int
+    slug: str
+    title: str
+    description: str
+    sections: list[PageSection]
+    faqs: list[FaqItem]
+    cta_label: str
+    cta_href: str
+    published: bool
+
+
+class SitePageUpdate(CamelModel):
+    title: str | None = Field(default=None, min_length=1, max_length=300)
+    description: str | None = Field(default=None, max_length=3000)
+    sections: list[PageSection] | None = None
+    faqs: list[FaqItem] | None = None
+    cta_label: str | None = Field(default=None, max_length=160)
+    cta_href: str | None = Field(default=None, max_length=300)
+    published: bool | None = None
+
+
+class SitePageCreate(SitePageUpdate):
+    slug: str = Field(min_length=2, max_length=120)
+    title: str = Field(min_length=1, max_length=300)

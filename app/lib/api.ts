@@ -490,6 +490,73 @@ export const api = {
     apiFetch<{ message: string }>(`/api/admin/contact/${id}`, {
       method: "DELETE",
     }),
+
+  getSiteSettings: () => apiFetch<SiteSettings>("/api/settings"),
+  adminUpdateSiteSettings: (body: Partial<SiteSettings>) =>
+    apiFetch<SiteSettings>("/api/admin/settings", { method: "PATCH", body }),
+
+  listSitePages: () => apiFetch<SitePage[]>("/api/pages"),
+  getSitePage: (slug: string) => apiFetch<SitePage>(`/api/pages/${slug}`),
+  adminListSitePages: () => apiFetch<SitePage[]>("/api/admin/pages"),
+  adminCreateSitePage: (body: Partial<SitePage> & { slug: string; title: string }) =>
+    apiFetch<SitePage>("/api/admin/pages", { method: "POST", body }),
+  adminUpdateSitePage: (id: number, body: Partial<SitePage>) =>
+    apiFetch<SitePage>(`/api/admin/pages/${id}`, { method: "PATCH", body }),
+  adminDeleteSitePage: (id: number) =>
+    apiFetch<{ message: string }>(`/api/admin/pages/${id}`, { method: "DELETE" }),
+};
+
+export type SocialLink = { label: string; href: string; icon: string };
+export type SiteStat = { value: string; label: string };
+export type SiteFeature = { title: string; description: string; icon: string };
+
+export type PromoBanner = {
+  enabled: boolean;
+  badge: string;
+  title: string;
+  description: string;
+  ctaLabel: string;
+  ctaHref: string;
+  images: string[];
+};
+
+export type SiteSettings = {
+  brandName: string;
+  brandSubtitle: string;
+  brandTagline: string;
+  copyrightText: string;
+  contactPhone: string;
+  contactPhoneLink: string;
+  contactEmail: string;
+  contactAddress: string;
+  workingHours: string;
+  socialLinks: SocialLink[];
+  heroImages: string[];
+  stats: SiteStat[];
+  features: SiteFeature[];
+  footerBadges: string[];
+  promoBanner: PromoBanner;
+  shippingTimeText: string;
+  warrantyText: string;
+  originCountry: string;
+  productHighlights: string[];
+  freeShippingThreshold: number;
+  shippingCost: number;
+};
+
+export type PageSection = { heading: string; paragraphs: string[] };
+export type FaqItem = { question: string; answer: string };
+
+export type SitePage = {
+  id: number;
+  slug: string;
+  title: string;
+  description: string;
+  sections: PageSection[];
+  faqs: FaqItem[];
+  ctaLabel: string;
+  ctaHref: string;
+  published: boolean;
 };
 
 export type ProductReview = {

@@ -3,6 +3,7 @@
 import { FormEvent, useMemo, useState } from "react";
 import DialogCloseButton from "../../components/DialogCloseButton";
 import MultiImageUploadField from "../../components/MultiImageUploadField";
+import SelectDropdown from "../../components/SelectDropdown";
 import { useShop } from "../../components/ShopProvider";
 import {
   DEFAULT_PRODUCT_SPECS,
@@ -47,6 +48,7 @@ export default function AdminProductsPage() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [open, setOpen] = useState(false);
+  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [formError, setFormError] = useState("");
 
   const filtered = useMemo(() => {
@@ -332,18 +334,15 @@ export default function AdminProductsPage() {
                 />
               </Field>
               <Field label="دسته‌بندی">
-                <select
-                  required
+                <SelectDropdown
+                  id="product-category"
+                  label="دسته‌بندی"
                   value={form.categoryId}
-                  onChange={(e) => setForm({ ...form, categoryId: e.target.value })}
-                  className={inputClass}
-                >
-                  {categories.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
+                  options={categories.map((c) => ({ value: c.id, label: c.name }))}
+                  open={openDropdown === "product-category"}
+                  onOpenChange={setOpenDropdown}
+                  onChange={(categoryId) => setForm({ ...form, categoryId })}
+                />
               </Field>
 
               <Field label="قیمت قبل تخفیف (تومان)">

@@ -21,6 +21,7 @@ from app.api.routes import (
     orders,
     products,
     reviews,
+    site,
     uploads,
     wishlist,
 )
@@ -105,6 +106,14 @@ def _seed_blog_posts_if_empty() -> None:
             db.rollback()
 
 
+def _seed_site_content() -> None:
+    from app.services.site import get_or_create_settings, seed_site_pages_if_missing
+
+    with SessionLocal() as db:
+        get_or_create_settings(db)
+        seed_site_pages_if_missing(db)
+
+
 def _ensure_admin_mobile() -> None:
     """Keep configured admin mobile in sync for OTP login."""
     from sqlalchemy import select
@@ -161,6 +170,7 @@ async def lifespan(_: FastAPI):
     ensure_schema()
     _ensure_admin_mobile()
     _seed_blog_posts_if_empty()
+    _seed_site_content()
     try:
         from app.services.reviews import sync_all_product_ratings
 
@@ -206,6 +216,7 @@ def create_app() -> FastAPI:
         reviews.router,
         blog.router,
         contact.router,
+        site.router,
     ):
         app.include_router(router, prefix="/api")
 

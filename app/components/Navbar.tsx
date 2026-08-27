@@ -7,6 +7,7 @@ import { useCart } from "./CartProvider";
 import DialogCloseButton from "./DialogCloseButton";
 import { useAuth } from "./SessionProvider";
 import { useShop } from "./ShopProvider";
+import { useSiteSettings } from "./SiteSettingsProvider";
 import { useWishlist } from "./WishlistProvider";
 
 function LogoutIcon() {
@@ -207,6 +208,7 @@ export default function Navbar() {
   const { totalItems } = useCart();
   const { totalItems: wishlistCount } = useWishlist();
   const { categories: shopCategories } = useShop();
+  const { settings } = useSiteSettings();
   const { isLoggedIn, displayName, logout, isAdmin, isCustomer } = useAuth();
   const categories = shopCategories.map((cat) => ({
     name: cat.name,
@@ -294,8 +296,14 @@ export default function Navbar() {
                 </svg>
               </div>
               <div className="min-w-0">
-                <div className="text-base sm:text-lg md:text-xl font-black text-[#3d2410] leading-tight truncate">پریسما شاپ</div>
-                <div className="hidden sm:block text-[11px] md:text-xs text-[#a96c20] leading-tight">دکور و حروف کالیگرافی چوبی</div>
+                <div className="text-base sm:text-lg md:text-xl font-black text-[#3d2410] leading-tight truncate">
+                  {settings?.brandName}
+                </div>
+                {settings?.brandSubtitle && (
+                  <div className="hidden sm:block text-[11px] md:text-xs text-[#a96c20] leading-tight">
+                    {settings.brandSubtitle}
+                  </div>
+                )}
               </div>
             </Link>
 
@@ -409,7 +417,7 @@ export default function Navbar() {
               ))}
             </div>
 
-            {session && !isAdmin && (
+            {session && (
               <Link
                 href="/account/orders"
                 className="shrink-0 rounded-full border border-[#f1d6b0] bg-[#fff6ea] px-3 xl:px-4 py-2 text-xs font-semibold text-[#a96c20] hover:border-[#d4a96a] hover:text-[#8a5419] whitespace-nowrap"
@@ -457,7 +465,7 @@ export default function Navbar() {
                 </svg>
               </div>
               <div className="min-w-0">
-                <p className="truncate text-sm font-black text-[#3d2410]">پریسما شاپ</p>
+                <p className="truncate text-sm font-black text-[#3d2410]">{settings?.brandName}</p>
                 <p className="text-[11px] text-[#a96c20]">منوی فروشگاه</p>
               </div>
             </div>
@@ -504,7 +512,7 @@ export default function Navbar() {
                   </Link>
                 );
               })}
-              {session && !isAdmin && (
+              {session && (
                 <Link
                   href="/account/orders"
                   onClick={closeMenu}

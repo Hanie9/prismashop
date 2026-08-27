@@ -24,6 +24,9 @@ class Order(Base):
     user_id: Mapped[int | None] = mapped_column(
         Integer, ForeignKey("users.id"), nullable=True, index=True
     )
+    admin_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("admin_users.id"), nullable=True, index=True
+    )
 
     customer_first_name: Mapped[str] = mapped_column(String(100))
     customer_last_name: Mapped[str] = mapped_column(String(100))

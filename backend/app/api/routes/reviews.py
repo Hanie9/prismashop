@@ -185,7 +185,7 @@ def admin_update_review(
     if not review:
         raise HTTPException(status_code=404, detail="نظر یافت نشد")
 
-    data = payload.model_dump(exclude_unset=True)
+    data = payload.updates()
     if "featured_on_home" in data and data["featured_on_home"] is not None:
         turning_on = bool(data["featured_on_home"]) and not review.featured_on_home
         review.featured_on_home = bool(data["featured_on_home"])

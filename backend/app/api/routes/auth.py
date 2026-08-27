@@ -367,7 +367,7 @@ def update_me(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    data = payload.model_dump(exclude_unset=True)
+    data = payload.updates()
     for key, value in data.items():
         if isinstance(value, str):
             value = value.strip()

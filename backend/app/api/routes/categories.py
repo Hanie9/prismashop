@@ -75,7 +75,7 @@ def update_category(
     if not category:
         raise HTTPException(status_code=404, detail="دسته‌بندی یافت نشد")
 
-    data = payload.model_dump(exclude_unset=True)
+    data = payload.updates()
     if "name" in data and data["name"] is not None:
         new_name = data["name"].strip()
         category.name = new_name

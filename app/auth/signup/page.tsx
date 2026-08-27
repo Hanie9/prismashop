@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import OtpCodeInput from "../../components/OtpCodeInput";
 import { useAuth } from "../../components/SessionProvider";
+import { useSiteSettings } from "../../components/SiteSettingsProvider";
 import { api, setSessionPersist, setStoredSessionId } from "../../lib/api";
 import { isValidIranMobile, normalizeIranMobileInput, onlyDigits } from "../../lib/validation";
 
@@ -33,6 +34,7 @@ function normalizeMobile(value: string) {
 export default function SignupPage() {
   const router = useRouter();
   const { refresh } = useAuth();
+  const { settings } = useSiteSettings();
   const [step, setStep] = useState(1);
   const [phase, setPhase] = useState<"mobile" | "otp">("mobile");
   const [error, setError] = useState("");
@@ -198,8 +200,10 @@ export default function SignupPage() {
               </svg>
             </div>
             <div>
-              <div className="text-lg font-black text-white">پریسما شاپ</div>
-              <div className="text-xs text-[#e3c091]">دکور و حروف کالیگرافی</div>
+              <div className="text-lg font-black text-white">{settings?.brandName}</div>
+              {settings?.brandSubtitle && (
+                <div className="text-xs text-[#e3c091]">{settings.brandSubtitle}</div>
+              )}
             </div>
           </Link>
 
@@ -219,7 +223,7 @@ export default function SignupPage() {
                 حساب جدید، تجربه بهتر
               </span>
               <h2 className="mb-4 text-3xl xl:text-4xl 2xl:text-5xl font-black leading-[1.35] text-white">
-                عضویت در پریسما
+                عضویت در {settings?.brandName}
                 <br />
                 با کد تأیید موبایل
               </h2>

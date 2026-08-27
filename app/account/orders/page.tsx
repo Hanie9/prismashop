@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import BackLink from "../../components/BackLink";
+import LoginPromptDialog from "../../components/LoginPromptDialog";
 import PageLoader from "../../components/PageLoader";
 import PriceText from "../../components/PriceText";
 import { useAuth } from "../../components/SessionProvider";
@@ -20,20 +21,23 @@ const statusLabel: Record<Order["status"], string> = {
 
 export default function MyOrdersPage() {
   const router = useRouter();
-  const { ready, isCustomer, isLoggedIn } = useAuth();
+  const { ready, isCustomer, isAdmin, isLoggedIn } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
+  const [loginPromptOpen, setLoginPromptOpen] = useState(false);
 
   useEffect(() => {
     if (!ready) return;
     if (!isLoggedIn) {
-      router.replace("/");
+      setLoading(false);
+      setLoginPromptOpen(true);
       return;
     }
-    if (!isCustomer) {
+    setLoginPromptOpen(false);
+    if (!isCustomer && !isAdmin) {
       setLoading(false);
-      setError("تاریخچه سفارش فقط برای حساب مشتری در دسترس است.");
+      setError("تاریخچه سفارش فقط برای کاربران وارد شده در دسترس است.");
       return;
     }
     let cancelled = false;
@@ -52,7 +56,7 @@ export default function MyOrdersPage() {
     return () => {
       cancelled = true;
     };
-  }, [ready, isLoggedIn, isCustomer, router]);
+  }, [ready, isLoggedIn, isCustomer, isAdmin, router]);
 
   return (
     <div className="min-h-screen bg-[#faf6ee]">
@@ -74,15 +78,40 @@ export default function MyOrdersPage() {
           </div>
         )}
 
-        {!loading && !error && orders.length === 0 && (
+        {!loading && !error && !isLoggedIn && (
           <div className="rounded-3xl border border-[#e8cfa8] bg-white p-10 text-center">
-            <p className="mb-4 text-[#6d4014]">هنوز سفارشی ثبت نکرده‌اید.</p>
-            <Link
-              href="/products"
+            <p className="mb-4 text-[#6d4014]">
+              برای دیدن سفارش‌هایتان وارد حساب کاربری شوید.
+            </p>
+            <button
+              type="button"
+              onClick={() => setLoginPromptOpen(true)}
               className="inline-flex rounded-full bg-[#8a5419] px-6 py-3 text-sm font-bold text-white"
             >
-              مشاهده محصولات
-            </Link>
+              ورود به حساب
+            </button>
+          </div>
+        )}
+
+        {!loading && !error && isLoggedIn && orders.length === 0 && (
+          <div className="rounded-3xl border border-[#e8cfa8] bg-white p-10 text-center">
+            <p className="mb-4 text-[#6d4014]">هنوز سفارشی ثبت نکرده‌اید.</p>
+            <div className="flex flex-wrap items-center justify-center gap-3">
+              <Link
+                href="/products"
+                className="inline-flex rounded-full bg-[#8a5419] px-6 py-3 text-sm font-bold text-white"
+              >
+                مشاهده محصولات
+              </Link>
+              {isAdmin && (
+                <Link
+                  href="/admin/orders"
+                  className="inline-flex rounded-full border border-[#e8cfa8] bg-[#fffaf5] px-6 py-3 text-sm font-medium text-[#6d4014] hover:border-[#d4a96a]"
+                >
+                  همه سفارش‌های فروشگاه
+                </Link>
+              )}
+            </div>
           </div>
         )}
 
@@ -129,6 +158,17 @@ export default function MyOrdersPage() {
           ))}
         </div>
       </div>
+
+      <LoginPromptDialog
+        open={loginPromptOpen}
+        title="ورود برای پیگیری سفارش"
+        description="برای دیدن وضعیت سفارش‌هایتان ابتدا وارد حساب کاربری شوید."
+        onCancel={() => setLoginPromptOpen(false)}
+        onConfirm={() => {
+          setLoginPromptOpen(false);
+          router.push(`/auth/login?next=${encodeURIComponent("/account/orders")}`);
+        }}
+      />
     </div>
   );
 }

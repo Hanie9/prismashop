@@ -4,6 +4,7 @@ import Link from "next/link";
 import { type FormEvent, useEffect, useState } from "react";
 import BackLink from "../components/BackLink";
 import { useAuth } from "../components/SessionProvider";
+import { useSiteSettings } from "../components/SiteSettingsProvider";
 import { api, type ContactMessage } from "../lib/api";
 import { isValidEmail, isValidIranMobile } from "../lib/validation";
 
@@ -19,6 +20,7 @@ function formatDateTime(value: string) {
 
 export default function ContactPage() {
   const { isCustomer, customer, ready } = useAuth();
+  const { settings } = useSiteSettings();
   const [sent, setSent] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
@@ -289,22 +291,40 @@ export default function ContactPage() {
           </div>
 
           <div className="space-y-4">
-            <div className="bg-white border border-[#e8cfa8] rounded-2xl p-5">
-              <h2 className="font-bold text-[#4e2e0e] mb-2">پشتیبانی تلفنی</h2>
-              <a href="tel:+982112345678" className="text-[#6d4014] hover:text-[#a96c20]">
-                ۰۲۱-۱۲۳۴۵۶۷۸
-              </a>
-            </div>
-            <div className="bg-white border border-[#e8cfa8] rounded-2xl p-5">
-              <h2 className="font-bold text-[#4e2e0e] mb-2">ایمیل</h2>
-              <a href="mailto:info@prismashop.ir" className="text-[#6d4014] hover:text-[#a96c20]">
-                info@prismashop.ir
-              </a>
-            </div>
-            <div className="bg-white border border-[#e8cfa8] rounded-2xl p-5">
-              <h2 className="font-bold text-[#4e2e0e] mb-2">آدرس</h2>
-              <p className="text-sm text-[#6d4014]">تهران، خیابان ولیعصر، پلاک ۱۲۳</p>
-            </div>
+            {settings?.contactPhone && (
+              <div className="bg-white border border-[#e8cfa8] rounded-2xl p-5">
+                <h2 className="font-bold text-[#4e2e0e] mb-2">پشتیبانی تلفنی</h2>
+                <a
+                  href={`tel:${settings.contactPhoneLink || settings.contactPhone}`}
+                  className="text-[#6d4014] hover:text-[#a96c20]"
+                >
+                  {settings.contactPhone}
+                </a>
+              </div>
+            )}
+            {settings?.contactEmail && (
+              <div className="bg-white border border-[#e8cfa8] rounded-2xl p-5">
+                <h2 className="font-bold text-[#4e2e0e] mb-2">ایمیل</h2>
+                <a
+                  href={`mailto:${settings.contactEmail}`}
+                  className="text-[#6d4014] hover:text-[#a96c20]"
+                >
+                  {settings.contactEmail}
+                </a>
+              </div>
+            )}
+            {settings?.contactAddress && (
+              <div className="bg-white border border-[#e8cfa8] rounded-2xl p-5">
+                <h2 className="font-bold text-[#4e2e0e] mb-2">آدرس</h2>
+                <p className="text-sm text-[#6d4014]">{settings.contactAddress}</p>
+              </div>
+            )}
+            {settings?.workingHours && (
+              <div className="bg-white border border-[#e8cfa8] rounded-2xl p-5">
+                <h2 className="font-bold text-[#4e2e0e] mb-2">ساعات پاسخگویی</h2>
+                <p className="text-sm text-[#6d4014]">{settings.workingHours}</p>
+              </div>
+            )}
           </div>
         </div>
       </div>

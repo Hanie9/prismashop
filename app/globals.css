@@ -116,6 +116,45 @@ a, button {
   box-shadow: 0 12px 40px rgba(89, 48, 10, 0.15);
 }
 
+/* Dropdown menu entrance */
+@keyframes dropdown-in-down {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes dropdown-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-dropdown-down {
+  animation: dropdown-in-down 0.16s ease-out;
+}
+
+.animate-dropdown-up {
+  transform-origin: bottom;
+  animation: dropdown-in-up 0.16s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-dropdown-down,
+  .animate-dropdown-up {
+    animation: none;
+  }
+}
+
 /* Persian number font */
 @font-face {
   font-family: 'Vazirmatn';

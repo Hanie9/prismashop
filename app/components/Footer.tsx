@@ -2,25 +2,23 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import SiteIcon from "./SiteIcon";
+import { useSiteSettings } from "./SiteSettingsProvider";
+import TrackOrderLink from "./TrackOrderLink";
 
 const footerLinks = {
   quick: [
     { name: "صفحه اصلی", href: "/" },
     { name: "همه محصولات", href: "/products" },
-    { name: "حروف کالیگرافی", href: "/products?cat=calligraphy" },
     { name: "علاقه‌مندی‌ها", href: "/wishlist" },
     { name: "بلاگ", href: "/blog" },
   ],
-  support: [
-    { name: "درباره ما", href: "/about" },
-    { name: "تماس با ما", href: "/contact" },
-    { name: "پیگیری سفارش", href: "/track-order" },
-    { name: "حریم خصوصی", href: "/privacy" },
-  ],
+  support: [{ name: "حریم خصوصی", href: "/privacy" }],
 };
 
 export default function Footer() {
   const pathname = usePathname();
+  const { settings } = useSiteSettings();
 
   if (pathname.startsWith("/auth")) {
     return null;
@@ -40,23 +38,31 @@ export default function Footer() {
                   </svg>
                 </div>
                 <div>
-                  <div className="text-lg font-black text-white">پریسما شاپ</div>
-                  <div className="text-xs text-[#cfa56c]">فروشگاه دکور و کالیگرافی</div>
+                  <div className="text-lg font-black text-white">{settings?.brandName}</div>
+                  {settings?.brandSubtitle && (
+                    <div className="text-xs text-[#cfa56c]">{settings.brandSubtitle}</div>
+                  )}
                 </div>
               </div>
-              <p className="mt-3 text-sm leading-7 text-[#e3c091]">
-                آثار چوبی مدرن و حروف کالیگرافی با طراحی خاص برای خانه و محل کار.
-              </p>
-      <div className="mt-4 flex flex-wrap items-center gap-2">
-                <span className="rounded-full bg-[#3b220d] px-3 py-1 text-[11px] text-[#d9b17d]">ارسال سراسری</span>
-                <span className="rounded-full bg-[#3b220d] px-3 py-1 text-[11px] text-[#d9b17d]">ضمانت اصالت</span>
+              {settings?.brandTagline && (
+                <p className="mt-3 text-sm leading-7 text-[#e3c091]">{settings.brandTagline}</p>
+              )}
+              <div className="mt-4 flex flex-wrap items-center gap-2">
+                {(settings?.footerBadges ?? []).map((badge) => (
+                  <span
+                    key={badge}
+                    className="rounded-full bg-[#3b220d] px-3 py-1 text-[11px] text-[#d9b17d]"
+                  >
+                    {badge}
+                  </span>
+                ))}
               </div>
             </div>
 
             <div>
               <h3 className="text-sm font-bold text-white mb-3">دسترسی سریع</h3>
               <div className="grid grid-cols-2 gap-2">
-                {footerLinks.quick.slice(0, 4).map((item) => (
+                {footerLinks.quick.map((item) => (
                   <Link
                     key={item.href}
                     href={item.href}
@@ -71,17 +77,38 @@ export default function Footer() {
             <div>
               <h3 className="text-sm font-bold text-white mb-3">ارتباط با ما</h3>
               <div className="space-y-2 text-sm text-[#ddb98a]">
-                <div>۰۲۱-۱۲۳۴۵۶۷۸</div>
-                <div>info@prismashop.ir</div>
+                {settings?.contactPhone && <div>{settings.contactPhone}</div>}
+                {settings?.contactEmail && <div>{settings.contactEmail}</div>}
+                {settings?.workingHours && (
+                  <div className="text-xs text-[#b98a53]">{settings.workingHours}</div>
+                )}
               </div>
+              {(settings?.socialLinks?.length ?? 0) > 0 && (
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  {settings!.socialLinks.map((social) => (
+                    <a
+                      key={social.href}
+                      href={social.href}
+                      target="_blank"
+                      rel="noreferrer"
+                      aria-label={social.label}
+                      title={social.label}
+                      className="flex h-9 w-9 items-center justify-center rounded-xl border border-[#5d3814] text-[#ddb98a] transition-colors hover:border-[#c2883a] hover:bg-[#3b220d] hover:text-white"
+                    >
+                      <SiteIcon name={social.icon} size={17} strokeWidth={1.7} />
+                    </a>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
 
         <div className="mt-4 flex flex-col md:flex-row items-center justify-between gap-3 text-xs text-[#b98a53] text-center md:text-right">
-          <span>© ۱۴۰۵ پریسما شاپ. تمامی حقوق محفوظ است.</span>
+          <span>{settings?.copyrightText}</span>
           <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
-            {footerLinks.support.slice(2).map((item) => (
+            <TrackOrderLink className="hover:text-[#f0d3ac]" />
+            {footerLinks.support.map((item) => (
               <Link key={item.href} href={item.href} className="hover:text-[#f0d3ac]">
                 {item.name}
               </Link>

@@ -4,12 +4,17 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import ProductCard from "./components/ProductCard";
 import { useShop } from "./components/ShopProvider";
+import SiteIcon from "./components/SiteIcon";
+import { useSiteSettings } from "./components/SiteSettingsProvider";
 import { api, type FeaturedReview } from "./lib/api";
 
 export default function Home() {
   const { getActiveProducts, categories, products: allProducts } = useShop();
+  const { settings } = useSiteSettings();
   const products = getActiveProducts();
   const featuredProducts = products.filter((p) => p.isBestseller).slice(0, 8);
+  const banner = settings?.promoBanner;
+  const features = settings?.features ?? [];
   const [testimonials, setTestimonials] = useState<FeaturedReview[]>([]);
 
   useEffect(() => {
@@ -71,11 +76,7 @@ export default function Home() {
 
             {/* Stats */}
             <div className="flex flex-wrap gap-6 sm:gap-8 xl:gap-10 mt-8 sm:mt-10">
-              {[
-                { value: "۸۰+", label: "مدل کالیگرافی" },
-                { value: "۳۰۰۰+", label: "سفارش موفق" },
-                { value: "۱۰", label: "سال تجربه" },
-              ].map((stat) => (
+              {(settings?.stats ?? []).map((stat) => (
                 <div key={stat.label}>
                   <div className="text-xl sm:text-2xl xl:text-3xl font-black text-[#d4a96a]">{stat.value}</div>
                   <div className="text-xs text-[#a96c20] mt-0.5">{stat.label}</div>
@@ -86,12 +87,7 @@ export default function Home() {
 
           {/* Hero image grid */}
           <div className="hidden lg:grid grid-cols-2 gap-3 xl:gap-4">
-            {[
-              "/images/calligraphy/calligraphy-1.jpg",
-              "/images/calligraphy/calligraphy-2.jpg",
-              "/images/calligraphy/calligraphy-3.jpg",
-              "/images/calligraphy/calligraphy-4.jpg",
-            ].map((src, i) => (
+            {(settings?.heroImages ?? []).map((src, i) => (
               <div
                 key={i}
                 className={`overflow-hidden rounded-2xl border-2 border-[#d4a96a]/20 ${i === 0 || i === 3 ? "row-span-1" : ""}`}
@@ -147,6 +143,7 @@ export default function Home() {
       </section>
 
       {/* Banner */}
+      {banner?.enabled && (
       <section className="mx-4 lg:mx-auto max-w-7xl lg:px-6 xl:px-4 mb-12 lg:mb-16">
         <div className="relative overflow-hidden rounded-3xl bg-gradient-to-l from-[#6d4014] to-[#2e1a08] p-6 sm:p-8 lg:p-10 xl:p-12">
           <div className="absolute top-0 left-0 right-0 bottom-0 opacity-5" style={{
@@ -154,31 +151,36 @@ export default function Home() {
           }}></div>
           <div className="relative grid lg:grid-cols-2 gap-6 lg:gap-10 items-center">
             <div>
-              <span className="text-[#d4a96a] text-sm font-medium mb-2 block">پیشنهاد ویژه هفته</span>
-              <h3 className="text-2xl sm:text-3xl xl:text-4xl font-black text-white mb-3">تا ۳۰٪ تخفیف<br/>روی حروف کالیگرافی</h3>
-              <p className="text-[#c2883a] mb-6 leading-7 text-sm sm:text-base max-w-lg">مدل‌های دیواری، آینه‌ای و دکوراتیو با عکس‌های واقعی و موجودی محدود.</p>
-              <Link
-                href="/products?cat=calligraphy&sale=true"
-                className="inline-block bg-[#d4a96a] text-[#2e1a08] font-bold px-6 sm:px-8 py-3 rounded-full hover:bg-[#c2883a] transition-colors text-sm sm:text-base"
-              >
-                خرید مدل‌های تخفیف‌دار
-              </Link>
+              {banner.badge && (
+                <span className="text-[#d4a96a] text-sm font-medium mb-2 block">{banner.badge}</span>
+              )}
+              <h3 className="text-2xl sm:text-3xl xl:text-4xl font-black text-white mb-3">{banner.title}</h3>
+              {banner.description && (
+                <p className="text-[#c2883a] mb-6 leading-7 text-sm sm:text-base max-w-lg">{banner.description}</p>
+              )}
+              {banner.ctaLabel && banner.ctaHref && (
+                <Link
+                  href={banner.ctaHref}
+                  className="inline-block bg-[#d4a96a] text-[#2e1a08] font-bold px-6 sm:px-8 py-3 rounded-full hover:bg-[#c2883a] transition-colors text-sm sm:text-base"
+                >
+                  {banner.ctaLabel}
+                </Link>
+              )}
             </div>
             <div className="hidden lg:flex justify-end gap-4">
-              <img
-                src="/images/calligraphy/calligraphy-5.jpg"
-                alt=""
-                className="w-36 h-36 xl:w-40 xl:h-40 object-cover rounded-[18px] border-2 border-[#d4a96a]/30"
-              />
-              <img
-                src="/images/calligraphy/calligraphy-6.jpg"
-                alt=""
-                className="w-36 h-36 xl:w-40 xl:h-40 object-cover rounded-[18px] border-2 border-[#d4a96a]/30 mt-6"
-              />
+              {banner.images.slice(0, 2).map((src, i) => (
+                <img
+                  key={src}
+                  src={src}
+                  alt=""
+                  className={`w-36 h-36 xl:w-40 xl:h-40 object-cover rounded-[18px] border-2 border-[#d4a96a]/30 ${i === 1 ? "mt-6" : ""}`}
+                />
+              ))}
             </div>
           </div>
         </div>
       </section>
+      )}
 
       {/* Featured products */}
       <section className="py-4 pb-12 sm:pb-16 max-w-7xl mx-auto px-4 lg:px-6 xl:px-4">
@@ -206,51 +208,33 @@ export default function Home() {
       </section>
 
       {/* Why us */}
+      {features.length > 0 && (
       <section className="mx-4 lg:mx-auto lg:max-w-7xl lg:px-6 xl:px-4 py-12 sm:py-16 lg:py-20">
         <div className="bg-[#2e1a08] rounded-[28px] md:rounded-[36px] px-5 md:px-10 py-12 md:py-16">
           <div className="text-center mb-10 sm:mb-12">
-            <h2 className="text-2xl sm:text-3xl font-black text-white mb-3">چرا پریسما شاپ؟</h2>
-            <p className="text-[#a96c20] max-w-xl mx-auto leading-7 text-sm sm:text-base">
-              تخصص ما خلق و عرضه‌ی آثار کالیگرافی چوبیِ اصیل با کیفیت حرفه‌ای است
-            </p>
+            <h2 className="text-2xl sm:text-3xl font-black text-white mb-3">
+              چرا {settings?.brandName ?? "ما"}؟
+            </h2>
+            {settings?.brandTagline && (
+              <p className="text-[#a96c20] max-w-xl mx-auto leading-7 text-sm sm:text-base">
+                {settings.brandTagline}
+              </p>
+            )}
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6 lg:gap-8">
-            {[
-              {
-                title: "کیفیت هنری و ماندگار",
-                desc: "هر اثر کالیگرافی با متریال مرغوب، برش دقیق و پرداخت نهایی کنترل‌شده آماده می‌شود تا در دکور شما ماندگار بماند.",
-                icon: (
-                  <path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0 1 12 2.944a11.955 11.955 0 0 1-8.618 3.04A12.02 12.02 0 0 0 3 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
-                ),
-              },
-              {
-                title: "مشاوره تخصصی دکور",
-                desc: "برای انتخاب سایز، رنگ و سبک تابلوهای کالیگرافی متناسب با فضای خانه یا محل کار، راهنمایی دقیق دریافت می‌کنید.",
-                icon: (
-                  <path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
-                ),
-              },
-              {
-                title: "ارسال امن و سریع",
-                desc: "بسته‌بندی مقاوم برای محصولات ظریف کالیگرافی و ارسال سراسری سریع، تا سفارش شما سالم و به‌موقع به دستتان برسد.",
-                icon: (
-                  <path d="M8 16H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v2m-6 12h8a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-8a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2z"/>
-                ),
-              },
-            ].map((item) => (
+            {features.map((item) => (
               <div key={item.title} className="bg-[#3d2210] rounded-[22px] p-6 sm:p-8 text-center border border-[#6d4014] hover:bg-[#4e2e0e] hover:border-[#a96c20] transition-colors">
                 <div className="w-14 h-14 bg-[#6d4014] rounded-2xl flex items-center justify-center mx-auto mb-5">
-                  <svg className="text-[#d4a96a]" width="28" height="28" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                    {item.icon}
-                  </svg>
+                  <SiteIcon name={item.icon} size={28} className="text-[#d4a96a]" />
                 </div>
                 <h3 className="text-lg font-bold text-white mb-3">{item.title}</h3>
-                <p className="text-[#a96c20] leading-7 text-sm">{item.desc}</p>
+                <p className="text-[#a96c20] leading-7 text-sm">{item.description}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
+      )}
 
       {/* Testimonials */}
       {testimonials.length > 0 && (
@@ -258,7 +242,9 @@ export default function Home() {
         <div className="bg-[#f5e9d5] rounded-[28px] md:rounded-[36px] px-5 md:px-10 py-10 sm:py-12 md:py-14 border border-[#e8cfa8]">
           <div className="text-center mb-8 sm:mb-10">
             <h2 className="text-xl sm:text-2xl font-bold text-[#2e1a08]">نظرات مشتریان</h2>
-            <p className="text-[#a96c20] text-sm mt-1">تجربه واقعی خریداران آثار کالیگرافی پریسما شاپ</p>
+            <p className="text-[#a96c20] text-sm mt-1">
+              تجربه واقعی خریداران {settings?.brandName}
+            </p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
             {testimonials.map((t) => (

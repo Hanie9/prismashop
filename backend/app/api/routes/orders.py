@@ -2,11 +2,10 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
-from app.api.deps import RequestSession, get_current_admin, get_current_user, get_request_session
+from app.api.deps import RequestSession, get_current_admin, get_request_session
 from app.core.database import get_db
 from app.models.admin_user import AdminUser
 from app.models.order import Order
-from app.models.user import User
 from app.schemas import CheckoutRequest, OrderOut, OrderStatusUpdate
 from app.services.orders import create_order, get_order_by_tracking
 from app.services.serializers import serialize_order
@@ -27,19 +26,29 @@ def place_order(
             status_code=401,
             detail="برای ثبت سفارش باید وارد حساب کاربری شوید",
         )
-    order = create_order(db, payload, user=ctx.user)
+    order = create_order(db, payload, user=ctx.user, admin=ctx.admin)
     return serialize_order(order)
 
 
 @router.get("/me", response_model=list[OrderOut])
 def my_orders(
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user),
+    ctx: RequestSession = Depends(get_request_session),
 ):
+    if ctx.auth.role == "admin" and ctx.admin:
+        owner_filter = Order.admin_id == ctx.admin.id
+    elif ctx.auth.role == "customer" and ctx.user:
+        owner_filter = Order.user_id == ctx.user.id
+    else:
+        raise HTTPException(
+            status_code=401,
+            detail="برای دیدن سفارش‌ها باید وارد حساب کاربری شوید",
+        )
+
     orders = db.scalars(
         select(Order)
         .options(selectinload(Order.items))
-        .where(Order.user_id == user.id)
+        .where(owner_filter)
         .order_by(Order.created_at.desc())
     ).all()
     return [serialize_order(o) for o in orders]

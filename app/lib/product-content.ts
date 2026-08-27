@@ -1,21 +1,14 @@
 import type { ProductSpec } from "./shop-types";
 
-/** Default specs template matching the storefront product page UI */
+/** Blank spec rows shown in the admin product form; values come from the admin. */
 export const DEFAULT_PRODUCT_SPECS: ProductSpec[] = [
   { label: "جنس", value: "" },
   { label: "ابعاد", value: "" },
   { label: "وزن", value: "" },
   { label: "رنگ", value: "" },
   { label: "سطح", value: "" },
-  { label: "کشور تولیدکننده", value: "ایران" },
-  { label: "ضمانت", value: "۷ روز ضمانت بازگشت" },
-];
-
-export const DEFAULT_PRODUCT_HIGHLIGHTS = [
-  "هنر دکوپاژ و دکوپاژ روی چوب",
-  "نجاری خانگی و پروژه‌های DIY",
-  "دکوراسیون داخلی منزل و محل کار",
-  "کلاس‌های هنری و کارگاه‌های آموزشی",
+  { label: "کشور تولیدکننده", value: "" },
+  { label: "ضمانت", value: "" },
 ];
 
 export function normalizeSpecs(specs?: ProductSpec[] | null): ProductSpec[] {

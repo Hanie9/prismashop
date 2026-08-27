@@ -16,9 +16,9 @@ def calc_sale_price(original: int, discount_percent: int | None) -> int:
     return max(0, round(original * (1 - clamped / 100)))
 
 
-def calc_shipping(subtotal: int) -> int:
-    """Shipping is not charged on the storefront summary; keep field for order records."""
-    return 0
+def calc_shipping(shipping_cost: int | None) -> int:
+    """Flat shipping fee configured by the admin; 0 means shipping is not charged."""
+    return max(0, shipping_cost or 0)
 
 
 def calc_coupon_discount(subtotal: int, coupon) -> int:

@@ -1,0 +1,133 @@
+"""Initial content for site settings and static pages.
+
+Only used to fill the database the first time; afterwards the admin panel
+is the single source of truth.
+"""
+
+DEFAULT_SITE_SETTINGS = {
+    "brand_name": "پریسما شاپ",
+    "brand_subtitle": "دکور و حروف کالیگرافی چوبی",
+    "brand_tagline": "آثار چوبی مدرن و حروف کالیگرافی با طراحی خاص برای خانه و محل کار.",
+    "copyright_text": "© ۱۴۰۵ پریسما شاپ. تمامی حقوق محفوظ است.",
+    "contact_phone": "۰۲۱-۱۲۳۴۵۶۷۸",
+    "contact_phone_link": "+982112345678",
+    "contact_email": "info@prismashop.ir",
+    "contact_address": "تهران، خیابان ولیعصر، پلاک ۱۲۳",
+    "working_hours": "شنبه تا چهارشنبه، ۹ تا ۱۸",
+    "social_links": [],
+    "hero_images": [
+        "/images/calligraphy/calligraphy-1.jpg",
+        "/images/calligraphy/calligraphy-2.jpg",
+        "/images/calligraphy/calligraphy-3.jpg",
+        "/images/calligraphy/calligraphy-4.jpg",
+    ],
+    "stats": [
+        {"value": "۸۰+", "label": "مدل کالیگرافی"},
+        {"value": "۳۰۰۰+", "label": "سفارش موفق"},
+        {"value": "۱۰", "label": "سال تجربه"},
+    ],
+    "features": [
+        {
+            "title": "کیفیت هنری و ماندگار",
+            "description": (
+                "هر اثر کالیگرافی با متریال مرغوب، برش دقیق و پرداخت نهایی "
+                "کنترل‌شده آماده می‌شود تا در دکور شما ماندگار بماند."
+            ),
+            "icon": "shield",
+        },
+        {
+            "title": "مشاوره تخصصی دکور",
+            "description": (
+                "برای انتخاب سایز، رنگ و سبک تابلوهای کالیگرافی متناسب با فضای "
+                "خانه یا محل کار، راهنمایی دقیق دریافت می‌کنید."
+            ),
+            "icon": "book",
+        },
+        {
+            "title": "ارسال امن و سریع",
+            "description": (
+                "بسته‌بندی مقاوم برای محصولات ظریف کالیگرافی و ارسال سراسری سریع، "
+                "تا سفارش شما سالم و به‌موقع به دستتان برسد."
+            ),
+            "icon": "box",
+        },
+    ],
+    "footer_badges": ["ارسال سراسری", "ضمانت اصالت"],
+    "promo_banner": {
+        "enabled": True,
+        "badge": "پیشنهاد ویژه هفته",
+        "title": "تا ۳۰٪ تخفیف روی حروف کالیگرافی",
+        "description": "مدل‌های دیواری، آینه‌ای و دکوراتیو با عکس‌های واقعی و موجودی محدود.",
+        "cta_label": "خرید مدل‌های تخفیف‌دار",
+        "cta_href": "/products?cat=calligraphy&sale=true",
+        "images": [
+            "/images/calligraphy/calligraphy-5.jpg",
+            "/images/calligraphy/calligraphy-6.jpg",
+        ],
+    },
+    "shipping_time_text": "ارسال: ۲ تا ۵ روز کاری",
+    "warranty_text": "۷ روز ضمانت بازگشت",
+    "origin_country": "ایران",
+    "product_highlights": [],
+    "free_shipping_threshold": 500_000,
+    "shipping_cost": 0,
+}
+
+
+DEFAULT_SITE_PAGES = [
+    {
+        "slug": "about",
+        "title": "درباره پریسما شاپ",
+        "description": (
+            "پریسما شاپ با تمرکز بر محصولات چوبی، دکوراسیون و حروف کالیگرافی شکل گرفت "
+            "تا خرید آنلاین آثار هنری را ساده، امن و لذت‌بخش کند."
+        ),
+        "sections": [
+            {
+                "heading": "داستان ما",
+                "paragraphs": [
+                    "ما فعالیت خود را از یک کارگاه کوچک چوب آغاز کردیم و امروز با تیم متخصص در تولید، "
+                    "فروش آنلاین و پشتیبانی، هزاران سفارش موفق در سراسر ایران ثبت کرده‌ایم.",
+                    "هدف ما فقط فروش نیست؛ می‌خواهیم با ابزار و محصولات درست، ایده‌های هنری و دکوراتیو "
+                    "شما را بهتر اجرا کنید.",
+                ],
+            },
+            {
+                "heading": "ماموریت ما",
+                "paragraphs": [
+                    "ارائه آثار چوبی و کالیگرافی با کیفیت بالا، طراحی اصیل و تجربه خرید آنلاین روان "
+                    "برای هر فضایی که می‌خواهید خاص‌تر دیده شود.",
+                ],
+            },
+        ],
+        "faqs": [],
+        "cta_label": "مشاهده محصولات",
+        "cta_href": "/products",
+    },
+    {
+        "slug": "privacy",
+        "title": "حریم خصوصی",
+        "description": (
+            "اطلاعات شما نزد پریسما شاپ محرمانه است و تنها برای پردازش سفارش و بهبود تجربه کاربری "
+            "استفاده می‌شود."
+        ),
+        "sections": [
+            {
+                "heading": "اطلاعاتی که ذخیره می‌کنیم",
+                "paragraphs": [
+                    "نام، شماره موبایل و نشانی تحویل سفارش تنها برای پردازش و ارسال سفارش نگهداری می‌شود.",
+                ],
+            },
+            {
+                "heading": "اشتراک‌گذاری اطلاعات",
+                "paragraphs": [
+                    "اطلاعات شما در اختیار هیچ شخص یا شرکت ثالثی جز شرکت حمل‌ونقل برای تحویل سفارش "
+                    "قرار نمی‌گیرد.",
+                ],
+            },
+        ],
+        "faqs": [],
+        "cta_label": "تماس با پشتیبانی",
+        "cta_href": "/contact",
+    },
+]

@@ -81,7 +81,7 @@ def create_product_from_payload(db: Session, payload: ProductCreate) -> Product:
 def update_product_from_payload(
     db: Session, product: Product, payload: ProductUpdate
 ) -> Product:
-    data = payload.model_dump(exclude_unset=True)
+    data = payload.updates()
 
     if "category_id" in data and data["category_id"] is not None:
         category = db.get(Category, data["category_id"])
