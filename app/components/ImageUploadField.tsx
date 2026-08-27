@@ -70,7 +70,7 @@ export default function ImageUploadField({ value, onChange, label = "تصویر 
               onChange={(e) => onChange(e.target.value)}
               className="mt-1.5 w-full rounded-2xl border border-[#ead7bb] bg-white px-3 py-2.5 text-sm outline-none focus:border-[#d4a96a]"
               dir="ltr"
-              placeholder="https://... یا /images/..."
+              placeholder="https://..."
             />
           </label>
           {value.startsWith("data:") && (

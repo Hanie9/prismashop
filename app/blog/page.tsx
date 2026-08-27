@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import PageLoader from "../components/PageLoader";
 import { api, type BlogPost } from "../lib/api";
-import { formatBlogDate, formatReadTime } from "../data/blog-posts";
+import { formatBlogDate, formatReadTime } from "../lib/blog-format";
 
 export default function BlogPage() {
   const [posts, setPosts] = useState<BlogPost[]>([]);

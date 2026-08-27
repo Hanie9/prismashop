@@ -5,7 +5,7 @@ import DialogCloseButton from "../../components/DialogCloseButton";
 import ImageUploadField from "../../components/ImageUploadField";
 import PageLoader from "../../components/PageLoader";
 import { api, type BlogPost } from "../../lib/api";
-import { formatBlogDate, formatReadTime } from "../../data/blog-posts";
+import { formatBlogDate, formatReadTime } from "../../lib/blog-format";
 
 type FormState = {
   id: number | null;

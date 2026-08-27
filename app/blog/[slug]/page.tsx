@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import BackLink from "../../components/BackLink";
 import PageLoader from "../../components/PageLoader";
 import { api, type BlogPost } from "../../lib/api";
-import { formatReadTime } from "../../data/blog-posts";
+import { formatReadTime } from "../../lib/blog-format";
 
 export default function BlogDetailPage() {
   const params = useParams<{ slug: string }>();

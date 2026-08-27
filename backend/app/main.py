@@ -18,6 +18,7 @@ from app.api.routes import (
     categories,
     contact,
     coupons,
+    media,
     orders,
     products,
     reviews,
@@ -88,24 +89,6 @@ def _session_cleaner_loop() -> None:
         time.sleep(300)
 
 
-def _seed_blog_posts_if_empty() -> None:
-    from sqlalchemy import select
-    from sqlalchemy.exc import IntegrityError
-
-    from app.models.blog_post import BlogPost
-    from app.seed.blog_data import SEED_BLOG_POSTS
-
-    with SessionLocal() as db:
-        if db.scalar(select(BlogPost.id).limit(1)):
-            return
-        try:
-            for item in SEED_BLOG_POSTS:
-                db.add(BlogPost(**item))
-            db.commit()
-        except IntegrityError:
-            db.rollback()
-
-
 def _seed_site_content() -> None:
     from app.services.site import get_or_create_settings, seed_site_pages_if_missing
 
@@ -169,13 +152,19 @@ async def lifespan(_: FastAPI):
     settings = get_settings()
     ensure_schema()
     _ensure_admin_mobile()
-    _seed_blog_posts_if_empty()
     _seed_site_content()
     try:
         from app.services.reviews import sync_all_product_ratings
 
         with SessionLocal() as db:
             sync_all_product_ratings(db)
+    except Exception:
+        pass
+    try:
+        from app.services.media import purge_orphan_media
+
+        with SessionLocal() as db:
+            purge_orphan_media(db)
     except Exception:
         pass
     settings.upload_path.mkdir(parents=True, exist_ok=True)
@@ -212,6 +201,7 @@ def create_app() -> FastAPI:
         cart.router,
         wishlist.router,
         uploads.router,
+        media.router,
         admin.router,
         reviews.router,
         blog.router,

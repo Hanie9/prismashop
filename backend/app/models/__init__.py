@@ -5,6 +5,7 @@ from app.models.cart import CartItem
 from app.models.category import Category
 from app.models.contact_message import ContactMessage
 from app.models.coupon import Coupon
+from app.models.media_asset import MediaAsset
 from app.models.order import Order, OrderItem
 from app.models.otp_challenge import OtpChallenge
 from app.models.product import Product
@@ -24,6 +25,7 @@ __all__ = [
     "Category",
     "ContactMessage",
     "Coupon",
+    "MediaAsset",
     "Order",
     "OrderItem",
     "OtpChallenge",

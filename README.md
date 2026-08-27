@@ -92,7 +92,7 @@ cp .env.example .env
 python -m venv .venv
 source .venv/bin/activate          # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
-python -m app.seed.run             # محصولات نمونه + ادمین
+python -m app.seed.run             # ساخت حساب ادمین
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
@@ -141,7 +141,7 @@ backend/                FastAPI
   app/api/routes/       endpointها (products, cart, reviews, …)
   app/models/           مدل‌های SQLAlchemy
   app/schemas/          اعتبارسنجی Pydantic (+ regex)
-  app/seed/             دادهٔ اولیه
+  app/seed/             ساخت ادمین + محتوای پیش‌فرض صفحات
 ```
 
 ## مسیرهای اصلی

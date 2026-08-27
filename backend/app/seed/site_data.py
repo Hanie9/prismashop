@@ -15,12 +15,7 @@ DEFAULT_SITE_SETTINGS = {
     "contact_address": "تهران، خیابان ولیعصر، پلاک ۱۲۳",
     "working_hours": "شنبه تا چهارشنبه، ۹ تا ۱۸",
     "social_links": [],
-    "hero_images": [
-        "/images/calligraphy/calligraphy-1.jpg",
-        "/images/calligraphy/calligraphy-2.jpg",
-        "/images/calligraphy/calligraphy-3.jpg",
-        "/images/calligraphy/calligraphy-4.jpg",
-    ],
+    "hero_images": [],
     "stats": [
         {"value": "۸۰+", "label": "مدل کالیگرافی"},
         {"value": "۳۰۰۰+", "label": "سفارش موفق"},
@@ -60,10 +55,7 @@ DEFAULT_SITE_SETTINGS = {
         "description": "مدل‌های دیواری، آینه‌ای و دکوراتیو با عکس‌های واقعی و موجودی محدود.",
         "cta_label": "خرید مدل‌های تخفیف‌دار",
         "cta_href": "/products?cat=calligraphy&sale=true",
-        "images": [
-            "/images/calligraphy/calligraphy-5.jpg",
-            "/images/calligraphy/calligraphy-6.jpg",
-        ],
+        "images": [],
     },
     "shipping_time_text": "ارسال: ۲ تا ۵ روز کاری",
     "warranty_text": "۷ روز ضمانت بازگشت",
