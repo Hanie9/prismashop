@@ -108,7 +108,7 @@ def _ensure_admin_mobile() -> None:
     try:
         mobile = normalize_iran_mobile(settings.ADMIN_MOBILE)
     except Exception:
-        mobile = "09355191020"
+        mobile = "09355191018"
 
     with SessionLocal() as db:
         admin = db.scalar(select(AdminUser).where(AdminUser.mobile == mobile))

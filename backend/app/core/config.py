@@ -26,7 +26,7 @@ class Settings(BaseSettings):
     SESSION_SHORT_EXPIRE_DAYS: int = 1
     SESSION_GUEST_EXPIRE_DAYS: int = 7
 
-    ADMIN_MOBILE: str = "09355191020"
+    ADMIN_MOBILE: str = "09355191018"
 
     # SMS.ir (OTP)
     SMS_IR_API_KEY: str = ""

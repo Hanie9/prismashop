@@ -34,7 +34,7 @@ services:
       CORS_ORIGINS: ${CORS_ORIGINS:-https://prismashop.ir,https://www.prismashop.ir}
       PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-https://prismashop.ir}
       UPLOAD_DIR: /app/uploads
-      ADMIN_MOBILE: ${ADMIN_MOBILE:-09355191020}
+      ADMIN_MOBILE: ${ADMIN_MOBILE:-09355191018}
       SMS_IR_API_KEY: ${SMS_IR_API_KEY:-}
       SMS_IR_TEMPLATE_ID: ${SMS_IR_TEMPLATE_ID:-0}
       SMS_IR_TEMPLATE_PARAM: ${SMS_IR_TEMPLATE_PARAM:-Code}

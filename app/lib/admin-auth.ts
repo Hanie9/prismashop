@@ -1,7 +1,7 @@
 import { api, setStoredSessionId } from "./api";
 
 export const ADMIN_SESSION_KEY = "prismashop-admin-session";
-export const ADMIN_MOBILE_DEFAULT = "09355191020";
+export const ADMIN_MOBILE_DEFAULT = "09355191018";
 
 export function setAdminSession() {
   if (typeof window === "undefined") return;
