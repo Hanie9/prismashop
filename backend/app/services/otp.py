@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.models.otp_challenge import OtpChallenge
+from app.services.sms import SmsDeliveryError, send_otp_sms
 
 OTP_LENGTH = 6
 OTP_TTL_SECONDS = 300
@@ -59,12 +60,23 @@ def create_otp_challenge(db: Session, *, mobile: str, purpose: str) -> tuple[Otp
         verified_at=None,
         signup_token=None,
     )
+
+    settings = get_settings()
+    if settings.sms_configured:
+        try:
+            send_otp_sms(mobile, code)
+        except SmsDeliveryError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail=str(exc),
+            ) from exc
+    else:
+        # Dev fallback when SMS.ir is not configured
+        print(f"[OTP] mobile={mobile} purpose={purpose} code={code}")
+
     db.add(challenge)
     db.commit()
     db.refresh(challenge)
-
-    # Dev fallback: log OTP so local testing works without SMS gateway
-    print(f"[OTP] mobile={mobile} purpose={purpose} code={code}")
     return challenge, code
 
 

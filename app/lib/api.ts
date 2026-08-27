@@ -256,25 +256,10 @@ export const api = {
       "/api/auth/otp/verify",
       { method: "POST", body: { mobile, code, purpose: "signup" } },
     ),
-  login: (emailOrMobile: string, password: string, rememberMe = false) =>
-    apiFetch<SessionInfo>("/api/auth/login", {
-      method: "POST",
-      body: { emailOrMobile, password, rememberMe },
-    }),
-  adminLogin: (email: string, password: string, rememberMe = false) =>
-    apiFetch<SessionInfo>("/api/auth/login", {
-      method: "POST",
-      body: { emailOrMobile: email, password, rememberMe },
-    }),
   logout: () => apiFetch<{ message: string }>("/api/auth/logout", { method: "POST" }),
   me: () => apiFetch<CustomerProfile>("/api/auth/me"),
   updateProfile: (body: Record<string, unknown>) =>
     apiFetch<CustomerProfile>("/api/auth/me", { method: "PATCH", body }),
-  changePassword: (currentPassword: string, newPassword: string) =>
-    apiFetch<{ message: string }>("/api/auth/me/password", {
-      method: "POST",
-      body: { currentPassword, newPassword },
-    }),
   adminMe: () => apiFetch<AdminProfile>("/api/auth/admin/me"),
 
   listProducts: (params?: Record<string, string | number | boolean | undefined>) => {

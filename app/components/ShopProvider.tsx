@@ -80,6 +80,7 @@ export function ShopProvider({ children }: { children: ReactNode }) {
         name: c.name,
         icon: c.icon,
         image: c.image,
+        productCount: c.productCount ?? 0,
       })),
     );
     setProducts(prodRes.items.map(mapProduct));
@@ -230,6 +231,7 @@ export function ShopProvider({ children }: { children: ReactNode }) {
         name: created.name,
         icon: created.icon,
         image: created.image,
+        productCount: created.productCount ?? 0,
       },
     ]);
   }, []);
@@ -244,6 +246,7 @@ export function ShopProvider({ children }: { children: ReactNode }) {
               name: updated.name,
               icon: updated.icon,
               image: updated.image,
+              productCount: updated.productCount ?? c.productCount ?? 0,
             }
           : c,
       ),

@@ -13,6 +13,7 @@ export default function Home() {
   const { settings } = useSiteSettings();
   const products = getActiveProducts();
   const featuredProducts = products.filter((p) => p.isBestseller).slice(0, 8);
+  const featuredCategory = categories[0];
   const banner = settings?.promoBanner;
   const features = settings?.features ?? [];
   const [testimonials, setTestimonials] = useState<FeaturedReview[]>([]);
@@ -61,10 +62,10 @@ export default function Home() {
             </p>
             <div className="flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-4">
               <Link
-                href="/products?cat=calligraphy"
+                href={featuredCategory ? `/products?cat=${featuredCategory.id}` : "/products"}
                 className="bg-[#d4a96a] hover:bg-[#c2883a] text-[#2e1a08] font-bold px-6 sm:px-8 py-3.5 rounded-full transition-all hover:shadow-xl hover:shadow-[#d4a96a]/30 text-sm sm:text-base text-center"
               >
-                مشاهده حروف کالیگرافی
+                {featuredCategory ? `مشاهده ${featuredCategory.name}` : "مشاهده محصولات"}
               </Link>
               <Link
                 href="/about"

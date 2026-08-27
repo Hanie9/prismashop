@@ -159,7 +159,7 @@ export default function CartPage() {
   const { isLoggedIn, ready } = useAuth();
   const { items, hydrated: cartHydrated, addItem, updateQty, removeItem, clearCart, getAvailableStock } =
     useCart();
-  const { getProduct, refreshShop } = useShop();
+  const { getProduct, refreshShop, categories } = useShop();
   const { settings } = useSiteSettings();
   const [stockMsg, setStockMsg] = useState("");
   const [clearDialogOpen, setClearDialogOpen] = useState(false);
@@ -280,12 +280,15 @@ export default function CartPage() {
                     <path d="m12 19-7-7 7-7" />
                   </svg>
                 </Link>
-                <Link
-                  href="/products?cat=calligraphy"
-                  className="inline-flex w-full items-center justify-center rounded-full border border-[#e8cfa8] bg-white/70 px-8 py-3.5 text-sm font-medium text-[#6d4014] backdrop-blur-sm transition-all hover:border-[#d4a96a] hover:bg-[#fffaf5] hover:text-[#8a5419] sm:w-auto"
-                >
-                  حروف کالیگرافی
-                </Link>
+                {categories.slice(0, 2).map((cat) => (
+                  <Link
+                    key={cat.id}
+                    href={`/products?cat=${cat.id}`}
+                    className="inline-flex w-full items-center justify-center rounded-full border border-[#e8cfa8] bg-white/70 px-8 py-3.5 text-sm font-medium text-[#6d4014] backdrop-blur-sm transition-all hover:border-[#d4a96a] hover:bg-[#fffaf5] hover:text-[#8a5419] sm:w-auto"
+                  >
+                    {cat.name}
+                  </Link>
+                ))}
               </div>
             </div>
           </div>

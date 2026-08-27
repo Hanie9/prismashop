@@ -54,7 +54,7 @@ DEFAULT_SITE_SETTINGS = {
         "title": "تا ۳۰٪ تخفیف روی حروف کالیگرافی",
         "description": "مدل‌های دیواری، آینه‌ای و دکوراتیو با عکس‌های واقعی و موجودی محدود.",
         "cta_label": "خرید مدل‌های تخفیف‌دار",
-        "cta_href": "/products?cat=calligraphy&sale=true",
+        "cta_href": "/products?sale=true",
         "images": [],
     },
     "shipping_time_text": "ارسال: ۲ تا ۵ روز کاری",

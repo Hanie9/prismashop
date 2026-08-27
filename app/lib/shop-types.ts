@@ -37,6 +37,7 @@ export type Category = {
   name: string;
   icon: string;
   image: string;
+  productCount?: number;
 };
 
 export type Coupon = {

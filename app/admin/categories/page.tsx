@@ -9,12 +9,13 @@ import type { Category } from "../../lib/shop-types";
 const empty = { id: "", name: "", icon: "🪵", image: "" };
 
 export default function AdminCategoriesPage() {
-  const { categories, products, addCategory, updateCategory, deleteCategory } =
-    useShop();
+  const { categories, addCategory, updateCategory, deleteCategory } = useShop();
   const [form, setForm] = useState(empty);
   const [editing, setEditing] = useState(false);
   const [open, setOpen] = useState(false);
   const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const startCreate = () => {
     setEditing(false);
@@ -43,6 +44,7 @@ export default function AdminCategoriesPage() {
       return;
     }
 
+    setSaving(true);
     try {
       if (editing) {
         await updateCategory(form.id, {
@@ -65,6 +67,26 @@ export default function AdminCategoriesPage() {
       setOpen(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : "ذخیره ناموفق بود.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async (cat: Category) => {
+    const count = cat.productCount ?? 0;
+    if (count > 0) {
+      alert("ابتدا محصولات این دسته را منتقل یا حذف کنید.");
+      return;
+    }
+    if (!confirm(`حذف دسته‌بندی «${cat.name}»؟`)) return;
+
+    setDeletingId(cat.id);
+    try {
+      await deleteCategory(cat.id);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "حذف ناموفق بود.");
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -73,7 +95,9 @@ export default function AdminCategoriesPage() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-xl font-black text-[#2e1a08] sm:text-2xl">دسته‌بندی‌ها</h1>
-          <p className="mt-1 text-sm text-[#6d4014]">نام، آیکون و تصویر دسته‌ها را مدیریت کنید</p>
+          <p className="mt-1 text-sm text-[#6d4014]">
+            دسته‌بندی‌ها در دیتابیس ذخیره می‌شوند و در فروشگاه نمایش داده می‌شوند
+          </p>
         </div>
         <button
           type="button"
@@ -84,49 +108,61 @@ export default function AdminCategoriesPage() {
         </button>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        {categories.map((cat) => {
-          const count = products.filter((p) => p.categoryId === cat.id).length;
-          return (
-            <div key={cat.id} className="overflow-hidden rounded-3xl border border-[#ead7bb] bg-white">
-              <img src={cat.image} alt="" className="h-36 w-full object-cover" />
-              <div className="p-4">
-                <div className="flex items-center gap-2">
-                  <span className="text-xl">{cat.icon}</span>
-                  <div className="min-w-0">
-                    <p className="truncate font-bold text-[#2e1a08]">{cat.name}</p>
-                    <p className="text-xs text-[#a96c20]">
-                      {cat.id} · {count.toLocaleString("fa-IR")} محصول
-                    </p>
+      {categories.length === 0 ? (
+        <div className="rounded-3xl border border-dashed border-[#e8cfa8] bg-white px-6 py-14 text-center">
+          <p className="text-lg font-bold text-[#2e1a08]">هنوز دسته‌بندی‌ای ثبت نشده</p>
+          <p className="mx-auto mt-2 max-w-md text-sm leading-7 text-[#a96c20]">
+            برای شروع، اولین دسته را بسازید. بعد از آن می‌توانید محصولات را به این دسته‌ها
+            اختصاص دهید.
+          </p>
+          <button
+            type="button"
+            onClick={startCreate}
+            className="mt-6 rounded-2xl bg-[#6d4014] px-6 py-2.5 text-sm font-bold text-white"
+          >
+            افزودن اولین دسته
+          </button>
+        </div>
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {categories.map((cat) => {
+            const count = cat.productCount ?? 0;
+            return (
+              <div key={cat.id} className="overflow-hidden rounded-3xl border border-[#ead7bb] bg-white">
+                <img src={cat.image} alt="" className="h-36 w-full object-cover" />
+                <div className="p-4">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xl">{cat.icon}</span>
+                    <div className="min-w-0">
+                      <p className="truncate font-bold text-[#2e1a08]">{cat.name}</p>
+                      <p className="text-xs text-[#a96c20]">
+                        {cat.id} · {count.toLocaleString("fa-IR")} محصول
+                      </p>
+                    </div>
+                  </div>
+                  <div className="mt-4 grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => startEdit(cat)}
+                      className="rounded-xl border border-[#ead7bb] px-3 py-2 text-xs font-medium text-[#6d4014]"
+                    >
+                      ویرایش
+                    </button>
+                    <button
+                      type="button"
+                      disabled={deletingId === cat.id}
+                      onClick={() => handleDelete(cat)}
+                      className="rounded-xl border border-red-200 px-3 py-2 text-xs font-medium text-red-600 disabled:opacity-50"
+                    >
+                      {deletingId === cat.id ? "در حال حذف..." : "حذف"}
+                    </button>
                   </div>
                 </div>
-                <div className="mt-4 grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => startEdit(cat)}
-                    className="rounded-xl border border-[#ead7bb] px-3 py-2 text-xs font-medium text-[#6d4014]"
-                  >
-                    ویرایش
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (count > 0) {
-                        alert("ابتدا محصولات این دسته را منتقل یا حذف کنید.");
-                        return;
-                      }
-                      if (confirm("حذف این دسته‌بندی؟")) deleteCategory(cat.id);
-                    }}
-                    className="rounded-xl border border-red-200 px-3 py-2 text-xs font-medium text-red-600"
-                  >
-                    حذف
-                  </button>
-                </div>
               </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      )}
 
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#2e1a08]/45 p-3 sm:p-4">
@@ -188,9 +224,10 @@ export default function AdminCategoriesPage() {
               </button>
               <button
                 type="submit"
-                className="rounded-2xl bg-[#6d4014] px-5 py-2.5 text-sm font-bold text-white"
+                disabled={saving}
+                className="rounded-2xl bg-[#6d4014] px-5 py-2.5 text-sm font-bold text-white disabled:opacity-60"
               >
-                ذخیره
+                {saving ? "در حال ذخیره..." : "ذخیره"}
               </button>
             </div>
           </form>

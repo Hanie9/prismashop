@@ -115,32 +115,6 @@ class OtpVerifySignupResponse(CamelModel):
     mobile: str
 
 
-class CustomerLogin(CamelModel):
-    email_or_mobile: str
-    password: str
-    remember_me: bool = False
-
-    @field_validator("email_or_mobile")
-    @classmethod
-    def validate_email_or_mobile(cls, v: str) -> str:
-        raw = v.strip()
-        if IRAN_MOBILE_RE.fullmatch(raw):
-            return raw
-        if EMAIL_RE.fullmatch(raw.lower()):
-            return raw.lower()
-        raise ValueError("ایمیل یا شماره موبایل معتبر وارد کنید")
-
-
-class AdminLogin(CamelModel):
-    email: EmailStr
-    password: str
-
-    @field_validator("email")
-    @classmethod
-    def validate_admin_email(cls, v: EmailStr) -> str:
-        return normalize_email(str(v))
-
-
 class SessionResponse(CamelModel):
     session_id: str
     role: Literal["guest", "customer", "admin"]
@@ -171,19 +145,9 @@ class CustomerProfileUpdate(CamelModel):
     postal_code: str | None = None
 
 
-class ChangePasswordRequest(CamelModel):
-    current_password: str = Field(min_length=1, max_length=128)
-    new_password: str = Field(min_length=8, max_length=128)
-
-    @field_validator("new_password")
-    @classmethod
-    def validate_new_password(cls, v: str) -> str:
-        return normalize_password(v)
-
-
 class AdminOut(CamelModel):
     id: int
-    email: EmailStr
+    email: str | None = None
     mobile: str | None = None
     first_name: str
     last_name: str

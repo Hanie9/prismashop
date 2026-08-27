@@ -98,10 +98,9 @@ def _seed_site_content() -> None:
 
 
 def _ensure_admin_mobile() -> None:
-    """Keep configured admin mobile in sync for OTP login."""
+    """Ensure the configured admin mobile exists for OTP login."""
     from sqlalchemy import select
 
-    from app.core.security import hash_password
     from app.models.admin_user import AdminUser
     from app.schemas import normalize_iran_mobile
 
@@ -112,34 +111,13 @@ def _ensure_admin_mobile() -> None:
         mobile = "09355191020"
 
     with SessionLocal() as db:
-        admin = db.scalar(
-            select(AdminUser).where(AdminUser.email == settings.ADMIN_EMAIL.lower())
-        )
-        by_mobile = db.scalar(select(AdminUser).where(AdminUser.mobile == mobile))
-
+        admin = db.scalar(select(AdminUser).where(AdminUser.mobile == mobile))
         if admin:
-            # Clear mobile from any other admin holding the target number
-            if by_mobile and by_mobile.id != admin.id:
-                by_mobile.mobile = None
-                db.add(by_mobile)
-            admin.mobile = mobile
-            if not admin.password_hash:
-                admin.password_hash = hash_password(settings.ADMIN_PASSWORD)
-            db.add(admin)
-            db.commit()
-            return
-
-        if by_mobile:
-            by_mobile.email = settings.ADMIN_EMAIL.lower()
-            db.add(by_mobile)
-            db.commit()
             return
 
         db.add(
             AdminUser(
-                email=settings.ADMIN_EMAIL.lower(),
                 mobile=mobile,
-                password_hash=hash_password(settings.ADMIN_PASSWORD),
                 first_name="مدیر",
                 last_name="پریسما",
             )

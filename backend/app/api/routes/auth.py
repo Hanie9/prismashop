@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
-from sqlalchemy import or_, select
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.api.deps import (
@@ -11,15 +11,13 @@ from app.api.deps import (
     get_request_session,
     set_session_cookie,
 )
+from app.core.config import get_settings
 from app.core.database import get_db
-from app.core.security import hash_password, verify_password
 from app.models.admin_user import AdminUser
 from app.models.session import AuthSession
 from app.models.user import User
 from app.schemas import (
     AdminOut,
-    ChangePasswordRequest,
-    CustomerLogin,
     CustomerOut,
     CustomerProfileUpdate,
     CustomerRegister,
@@ -54,7 +52,7 @@ def _session_payload(
 
 def _admin_display(admin: AdminUser) -> str:
     name = f"{admin.first_name} {admin.last_name}".strip()
-    return name or admin.email
+    return name or admin.mobile or "ادمین"
 
 
 def _user_display(user: User) -> str:
@@ -103,32 +101,7 @@ def current_session(
 
 
 def _resolve_admin_by_mobile(db: Session, mobile: str) -> AdminUser | None:
-    admin = db.scalar(select(AdminUser).where(AdminUser.mobile == mobile))
-    if admin:
-        return admin
-
-    # Auto-heal: attach configured ADMIN_MOBILE to the seed admin account
-    from app.core.config import get_settings
-    from app.schemas import normalize_iran_mobile as norm_mobile
-
-    settings = get_settings()
-    try:
-        configured = norm_mobile(settings.ADMIN_MOBILE)
-    except Exception:
-        configured = None
-    if not configured or configured != mobile:
-        return None
-
-    seed_admin = db.scalar(
-        select(AdminUser).where(AdminUser.email == settings.ADMIN_EMAIL.lower())
-    )
-    if not seed_admin:
-        return None
-    seed_admin.mobile = mobile
-    db.add(seed_admin)
-    db.commit()
-    db.refresh(seed_admin)
-    return seed_admin
+    return db.scalar(select(AdminUser).where(AdminUser.mobile == mobile))
 
 
 @router.post("/otp/request", response_model=OtpRequestResponse)
@@ -182,11 +155,11 @@ def request_otp(payload: OtpRequest, db: Session = Depends(get_db)):
     _, code = otp_service.create_otp_challenge(
         db, mobile=mobile, purpose=payload.purpose
     )
+    settings = get_settings()
     return OtpRequestResponse(
         message="کد تأیید ارسال شد",
         expires_in=OTP_TTL_SECONDS,
-        # Local/dev convenience — wire a real SMS provider in production
-        dev_code=code,
+        dev_code=code if not settings.sms_configured else None,
     )
 
 
@@ -299,60 +272,11 @@ def register(
 
 
 @router.post("/login", response_model=SessionResponse)
-def login(
-    payload: CustomerLogin,
-    request: Request,
-    response: Response,
-    db: Session = Depends(get_db),
-):
-    """Admin password login (and legacy customer password if still set)."""
-    identifier = payload.email_or_mobile.strip()
-    identifier_lower = identifier.lower()
-    guest = get_or_create_session(request, response, db)
-
-    admin = db.scalar(
-        select(AdminUser).where(AdminUser.email == identifier_lower)
-    )
-    if admin and verify_password(payload.password, admin.password_hash):
-        if not admin.is_active:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="حساب ادمین غیرفعال است",
-            )
-        auth = session_service.attach_admin(
-            db, guest, admin.id, rotate=True, remember_me=payload.remember_me
-        )
-        set_session_cookie(response, auth.id, remember_me=payload.remember_me)
-        return _session_payload(
-            auth, display_name=_admin_display(admin), email=admin.email
-        )
-
-    user = db.scalar(
-        select(User).where(
-            or_(User.email == identifier_lower, User.mobile == identifier)
-        )
-    )
-    if (
-        not user
-        or not user.password_hash
-        or not verify_password(payload.password, user.password_hash)
-    ):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="ایمیل/موبایل یا رمز عبور اشتباه است",
-        )
-    if not user.is_active:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="حساب کاربری غیرفعال است",
-        )
-
-    auth = session_service.attach_customer(
-        db, guest, user.id, rotate=True, remember_me=payload.remember_me
-    )
-    set_session_cookie(response, auth.id, remember_me=payload.remember_me)
-    return _session_payload(
-        auth, display_name=_user_display(user), email=user.email
+def login():
+    """Deprecated — login is OTP-only via /auth/otp/*."""
+    raise HTTPException(
+        status_code=status.HTTP_410_GONE,
+        detail="ورود فقط با کد تأیید موبایل امکان‌پذیر است",
     )
 
 
@@ -380,33 +304,6 @@ def update_me(
     return user
 
 
-@router.post("/me/password", response_model=MessageResponse)
-def change_password(
-    payload: ChangePasswordRequest,
-    db: Session = Depends(get_db),
-    user: User = Depends(get_current_user),
-):
-    if not user.password_hash:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="ورود با رمز عبور برای این حساب فعال نیست",
-        )
-    if not verify_password(payload.current_password, user.password_hash):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="رمز عبور فعلی اشتباه است",
-        )
-    if payload.current_password == payload.new_password:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="رمز جدید باید با رمز فعلی متفاوت باشد",
-        )
-    user.password_hash = hash_password(payload.new_password)
-    db.add(user)
-    db.commit()
-    return MessageResponse(message="رمز عبور با موفقیت تغییر کرد")
-
-
 @router.delete("/me/address", response_model=CustomerOut)
 def clear_address(
     db: Session = Depends(get_db),
@@ -423,14 +320,12 @@ def clear_address(
 
 
 @router.post("/admin/login", response_model=SessionResponse)
-def admin_login(
-    payload: CustomerLogin,
-    request: Request,
-    response: Response,
-    db: Session = Depends(get_db),
-):
-    """Alias of unified login for backwards compatibility."""
-    return login(payload, request, response, db)
+def admin_login():
+    """Deprecated — admin login is OTP-only via /auth/otp/*."""
+    raise HTTPException(
+        status_code=status.HTTP_410_GONE,
+        detail="ورود ادمین فقط با کد تأیید موبایل امکان‌پذیر است",
+    )
 
 
 @router.get("/admin/me", response_model=AdminOut)

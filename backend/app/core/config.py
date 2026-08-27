@@ -26,9 +26,12 @@ class Settings(BaseSettings):
     SESSION_SHORT_EXPIRE_DAYS: int = 1
     SESSION_GUEST_EXPIRE_DAYS: int = 7
 
-    ADMIN_EMAIL: str = "admin@prismashop.ir"
-    ADMIN_PASSWORD: str = "admin123"
     ADMIN_MOBILE: str = "09355191020"
+
+    # SMS.ir (OTP)
+    SMS_IR_API_KEY: str = ""
+    SMS_IR_TEMPLATE_ID: int = 0
+    SMS_IR_TEMPLATE_PARAM: str = "Code"
 
     CORS_ORIGINS: str = "http://localhost:3000,http://127.0.0.1:3000"
     UPLOAD_DIR: str = "uploads"
@@ -46,6 +49,10 @@ class Settings(BaseSettings):
     @property
     def cors_origins_list(self) -> list[str]:
         return [o.strip() for o in self.CORS_ORIGINS.split(",") if o.strip()]
+
+    @property
+    def sms_configured(self) -> bool:
+        return bool(self.SMS_IR_API_KEY and self.SMS_IR_TEMPLATE_ID)
 
     @property
     def upload_path(self) -> Path:

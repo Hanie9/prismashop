@@ -76,7 +76,7 @@ function ClearWishlistDialog({
 
 export default function WishlistPage() {
   const { ids, clearWishlist, totalItems } = useWishlist();
-  const { getActiveProducts } = useShop();
+  const { getActiveProducts, categories } = useShop();
   const products = getActiveProducts();
   const [clearOpen, setClearOpen] = useState(false);
 
@@ -143,12 +143,15 @@ export default function WishlistPage() {
                 >
                   مشاهده محصولات
                 </Link>
-                <Link
-                  href="/products?cat=calligraphy"
-                  className="w-full sm:w-auto rounded-full border border-[#e8cfa8] bg-[#fffaf5] px-8 py-3.5 text-sm font-medium text-[#6d4014] transition-all hover:border-[#d4a96a] hover:text-[#8a5419]"
-                >
-                  حروف کالیگرافی
-                </Link>
+                {categories.slice(0, 2).map((cat) => (
+                  <Link
+                    key={cat.id}
+                    href={`/products?cat=${cat.id}`}
+                    className="w-full sm:w-auto rounded-full border border-[#e8cfa8] bg-[#fffaf5] px-8 py-3.5 text-sm font-medium text-[#6d4014] transition-all hover:border-[#d4a96a] hover:text-[#8a5419]"
+                  >
+                    {cat.name}
+                  </Link>
+                ))}
               </div>
             </div>
           </div>

@@ -87,6 +87,7 @@ def ensure_schema() -> None:
         "ALTER TABLE users ALTER COLUMN email DROP NOT NULL",
         "ALTER TABLE users ALTER COLUMN password_hash DROP NOT NULL",
         "ALTER TABLE admin_users ALTER COLUMN password_hash DROP NOT NULL",
+        "ALTER TABLE admin_users ALTER COLUMN email DROP NOT NULL",
         "CREATE UNIQUE INDEX IF NOT EXISTS ix_admin_users_mobile "
         "ON admin_users (mobile) WHERE mobile IS NOT NULL",
     ):
