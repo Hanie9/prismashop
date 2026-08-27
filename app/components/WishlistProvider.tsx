@@ -17,75 +17,65 @@ type WishlistContextValue = {
   totalItems: number;
   hydrated: boolean;
   isWishlisted: (id: number) => boolean;
-  toggleItem: (id: number) => Promise<void> | void;
-  addItem: (id: number) => Promise<void> | void;
-  removeItem: (id: number) => Promise<void> | void;
-  clearWishlist: () => void;
+  toggleItem: (id: number) => Promise<void>;
+  addItem: (id: number) => Promise<void>;
+  removeItem: (id: number) => Promise<void>;
+  clearWishlist: () => Promise<void>;
 };
 
 const WishlistContext = createContext<WishlistContextValue | null>(null);
-const STORAGE_KEY = "prismashop-wishlist";
+const LEGACY_STORAGE_KEY = "prismashop-wishlist";
+
+async function migrateLegacyLocalWishlist(): Promise<number[]> {
+  try {
+    const raw = window.localStorage.getItem(LEGACY_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((id): id is number => typeof id === "number");
+  } catch {
+    return [];
+  }
+}
 
 export function WishlistProvider({ children }: { children: ReactNode }) {
-  const { ready, isCustomer } = useAuth();
+  const { ready, session } = useAuth();
   const [ids, setIds] = useState<number[]>([]);
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
     if (!ready) return;
     let cancelled = false;
+
     (async () => {
       try {
-        if (isCustomer) {
-          let local: number[] = [];
-          try {
-            const raw = window.localStorage.getItem(STORAGE_KEY);
-            if (raw) local = (JSON.parse(raw) as number[]).filter((n) => typeof n === "number");
-          } catch {}
-          const synced = local.length ? await api.syncWishlist(local) : await api.wishlistIds();
-          if (!cancelled) {
-            setIds(synced);
-            window.localStorage.setItem(STORAGE_KEY, JSON.stringify(synced));
-          }
-        } else {
-          const raw = window.localStorage.getItem(STORAGE_KEY);
-          if (raw) {
-            const parsed = JSON.parse(raw) as number[];
-            if (Array.isArray(parsed) && !cancelled) {
-              setIds(parsed.filter((id) => typeof id === "number"));
-            }
-          }
+        let serverIds = await api.wishlistIds();
+        const legacy = await migrateLegacyLocalWishlist();
+        const missing = legacy.filter((id) => !serverIds.includes(id));
+        for (const id of missing) {
+          const res = await api.toggleWishlist(id);
+          serverIds = res.productIds;
         }
+        if (legacy.length) {
+          window.localStorage.removeItem(LEGACY_STORAGE_KEY);
+        }
+        if (!cancelled) setIds(serverIds);
       } catch {
-        /* keep local */
+        if (!cancelled) setIds([]);
       } finally {
         if (!cancelled) setHydrated(true);
       }
     })();
+
     return () => {
       cancelled = true;
     };
-  }, [ready, isCustomer]);
+  }, [ready, session?.sessionId]);
 
-  useEffect(() => {
-    if (!hydrated || isCustomer) return;
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(ids));
-  }, [ids, hydrated, isCustomer]);
-
-  const toggleItem = useCallback(
-    async (id: number) => {
-      if (isCustomer) {
-        const res = await api.toggleWishlist(id);
-        setIds(res.productIds);
-        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(res.productIds));
-        return;
-      }
-      setIds((prev) =>
-        prev.includes(id) ? prev.filter((itemId) => itemId !== id) : [...prev, id],
-      );
-    },
-    [isCustomer],
-  );
+  const toggleItem = useCallback(async (id: number) => {
+    const res = await api.toggleWishlist(id);
+    setIds(res.productIds);
+  }, []);
 
   const addItem = useCallback(
     async (id: number) => {
@@ -103,9 +93,9 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
     [ids, toggleItem],
   );
 
-  const clearWishlist = useCallback(() => {
+  const clearWishlist = useCallback(async () => {
+    await api.clearWishlist();
     setIds([]);
-    window.localStorage.setItem(STORAGE_KEY, "[]");
   }, []);
 
   const isWishlisted = useCallback((id: number) => ids.includes(id), [ids]);

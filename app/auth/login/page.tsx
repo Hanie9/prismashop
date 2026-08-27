@@ -29,7 +29,7 @@ export default function LoginPage() {
   const [form, setForm] = useState({
     mobile: "",
     code: "",
-    remember: false,
+    rememberMobile: false,
   });
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -53,7 +53,7 @@ export default function LoginPage() {
     setForm((current) => ({
       ...current,
       mobile: remembered && isValidIranMobile(remembered) ? remembered : current.mobile,
-      remember: Boolean(remembered),
+      rememberMobile: Boolean(remembered && isValidIranMobile(remembered)),
     }));
     setSignupHref(next ? `/auth/signup?next=${encodeURIComponent(next)}` : "/auth/signup");
   }, []);
@@ -103,14 +103,14 @@ export default function LoginPage() {
     verifyingRef.current = true;
     setIsSubmitting(true);
     try {
-      setSessionPersist(form.remember);
+      setSessionPersist(true);
       const session = await api.verifyOtpLogin(
         normalizeMobile(form.mobile),
         onlyDigits(code),
-        form.remember,
+        true,
       );
       setStoredSessionId(session.sessionId);
-      if (form.remember) setRememberedLogin(normalizeMobile(form.mobile));
+      if (form.rememberMobile) setRememberedLogin(normalizeMobile(form.mobile));
       else setRememberedLogin(null);
 
       if (session.role === "admin") {
@@ -144,6 +144,12 @@ export default function LoginPage() {
       verifyingRef.current = false;
       setIsSubmitting(false);
     }
+  };
+
+  const clearMobile = () => {
+    setForm((prev) => ({ ...prev, mobile: "", rememberMobile: false }));
+    setRememberedLogin(null);
+    setError("");
   };
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
@@ -258,9 +264,23 @@ export default function LoginPage() {
                               setError("");
                             }}
                             placeholder="09123456789"
-                            className="h-12 w-full rounded-2xl border border-white/15 bg-white/14 px-4 pr-11 text-sm text-white placeholder:text-[#f0d3aa]/60 focus:border-[#f1d5ad]/60 focus:outline-none focus:ring-4 focus:ring-[#d4a96a]/15"
+                            className={`h-12 w-full rounded-2xl border border-white/15 bg-white/14 px-4 text-sm text-white placeholder:text-[#f0d3aa]/60 focus:border-[#f1d5ad]/60 focus:outline-none focus:ring-4 focus:ring-[#d4a96a]/15 ${
+                              form.mobile ? "pl-11 pr-11" : "pr-11"
+                            }`}
                             dir="ltr"
                           />
+                          {form.mobile ? (
+                            <button
+                              type="button"
+                              aria-label="پاک کردن شماره"
+                              onClick={clearMobile}
+                              className="absolute left-3 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full text-[#f0d3aa]/80 transition-colors hover:bg-white/10 hover:text-white"
+                            >
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2}>
+                                <path d="M18 6 6 18M6 6l12 12" />
+                              </svg>
+                            </button>
+                          ) : null}
                           <svg
                             className="pointer-events-none absolute right-3.5 top-3.5 text-[#f0d3aa]"
                             width="18"
@@ -278,8 +298,12 @@ export default function LoginPage() {
                       <label className="flex cursor-pointer items-center gap-2">
                         <input
                           type="checkbox"
-                          checked={form.remember}
-                          onChange={(e) => setForm({ ...form, remember: e.target.checked })}
+                          checked={form.rememberMobile}
+                          onChange={(e) => {
+                            const rememberMobile = e.target.checked;
+                            setForm({ ...form, rememberMobile });
+                            if (!rememberMobile) setRememberedLogin(null);
+                          }}
                           className="h-4 w-4 rounded accent-[#6d4014]"
                         />
                         <span className="text-sm text-[#f7ead3]">مرا به خاطر بسپار</span>

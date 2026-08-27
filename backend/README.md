@@ -67,7 +67,7 @@ systemctl is-active postgresql
 | `/api/products/*` | محصولات + نظرات هر محصول |
 | `/api/cart` | سبد مشتری (GET/PUT) و همگام‌سازی (`/sync`) |
 | `/api/cart/validate` | اعتبارسنجی موجودی قبل از تسویه |
-| `/api/wishlist/*` | علاقه‌مندی مشتری |
+| `/api/wishlist/*` | علاقه‌مندی (مهمان: سشن؛ مشتری: حساب کاربری) |
 | `/api/orders/*` | ثبت و مدیریت سفارش |
 | `/api/reviews/featured` | نظرات منتخب صفحه اصلی |
 | `/api/admin/reviews` | مدیریت نظرات و انتخاب برای صفحه اصلی |

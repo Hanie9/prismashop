@@ -168,8 +168,7 @@ export default function WishlistPage() {
         open={clearOpen}
         onCancel={() => setClearOpen(false)}
         onConfirm={() => {
-          clearWishlist();
-          setClearOpen(false);
+          void clearWishlist().then(() => setClearOpen(false));
         }}
       />
     </div>

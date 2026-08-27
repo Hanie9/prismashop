@@ -356,19 +356,8 @@ export const api = {
       `/api/wishlist/${productId}/toggle`,
       { method: "POST" },
     ),
-  syncWishlist: async (localIds: number[]) => {
-    const remote = await apiFetch<number[]>("/api/wishlist/ids");
-    const missing = localIds.filter((id) => !remote.includes(id));
-    let ids = remote;
-    for (const id of missing) {
-      const res = await apiFetch<{ wishlisted: boolean; productIds: number[] }>(
-        `/api/wishlist/${id}/toggle`,
-        { method: "POST" },
-      );
-      ids = res.productIds;
-    }
-    return ids;
-  },
+  clearWishlist: () =>
+    apiFetch<{ message: string }>("/api/wishlist", { method: "DELETE" }),
 
   dashboard: () => apiFetch<Record<string, unknown>>("/api/admin/dashboard"),
   customers: () =>

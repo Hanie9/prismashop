@@ -31,6 +31,7 @@ from app.schemas import (
 from app.services import otp as otp_service
 from app.services import sessions as session_service
 from app.services.otp import OTP_TTL_SECONDS
+from app.services.wishlist import merge_session_into_user
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -220,6 +221,7 @@ def verify_otp(
             detail="حساب کاربری غیرفعال است",
         )
 
+    merge_session_into_user(db, session_id=guest.id, user_id=user.id)
     auth = session_service.attach_customer(
         db, guest, user.id, rotate=True, remember_me=payload.remember_me
     )
@@ -264,6 +266,7 @@ def register(
     db.refresh(user)
 
     guest = get_or_create_session(request, response, db)
+    merge_session_into_user(db, session_id=guest.id, user_id=user.id)
     auth = session_service.attach_customer(db, guest, user.id, rotate=True)
     set_session_cookie(response, auth.id)
     return _session_payload(

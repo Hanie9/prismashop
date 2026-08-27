@@ -88,6 +88,12 @@ def ensure_schema() -> None:
         "ALTER TABLE users ALTER COLUMN password_hash DROP NOT NULL",
         "ALTER TABLE admin_users ALTER COLUMN password_hash DROP NOT NULL",
         "ALTER TABLE admin_users ALTER COLUMN email DROP NOT NULL",
+        "ALTER TABLE wishlist_items ALTER COLUMN user_id DROP NOT NULL",
+        "DROP INDEX IF EXISTS uq_wishlist_user_product",
+        "CREATE UNIQUE INDEX IF NOT EXISTS uq_wishlist_user_product "
+        "ON wishlist_items (user_id, product_id) WHERE user_id IS NOT NULL",
+        "CREATE UNIQUE INDEX IF NOT EXISTS uq_wishlist_session_product "
+        "ON wishlist_items (session_id, product_id) WHERE session_id IS NOT NULL",
         "CREATE UNIQUE INDEX IF NOT EXISTS ix_admin_users_mobile "
         "ON admin_users (mobile) WHERE mobile IS NOT NULL",
     ):
