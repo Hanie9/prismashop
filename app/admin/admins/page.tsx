@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import AdminBottomSheet from "../../components/AdminBottomSheet";
 import { useAuth } from "../../components/SessionProvider";
 import { api, type AdminUser } from "../../lib/api";
@@ -34,6 +34,13 @@ export default function AdminAdminsPage() {
   const [formError, setFormError] = useState("");
   const [saving, setSaving] = useState(false);
   const [busyId, setBusyId] = useState<number | null>(null);
+
+  const sortedAdmins = useMemo(() => {
+    if (!currentAdmin) return admins;
+    const self = admins.find((admin) => admin.id === currentAdmin.id);
+    const others = admins.filter((admin) => admin.id !== currentAdmin.id);
+    return self ? [self, ...others] : admins;
+  }, [admins, currentAdmin]);
 
   const load = async () => {
     setError("");
@@ -156,7 +163,7 @@ export default function AdminAdminsPage() {
         <div className="rounded-3xl border border-[#ead7bb] bg-white p-10 text-center text-[#6d4014]">
           در حال بارگذاری...
         </div>
-      ) : admins.length === 0 ? (
+      ) : sortedAdmins.length === 0 ? (
         <div className="rounded-3xl border border-dashed border-[#e8cfa8] bg-white px-6 py-14 text-center">
           <p className="text-lg font-bold text-[#2e1a08]">هنوز ادمینی ثبت نشده</p>
           <button
@@ -181,7 +188,7 @@ export default function AdminAdminsPage() {
                 </tr>
               </thead>
               <tbody>
-                {admins.map((row) => {
+                {sortedAdmins.map((row) => {
                   const isSelf = currentAdmin?.id === row.id;
                   return (
                     <tr
@@ -245,7 +252,7 @@ export default function AdminAdminsPage() {
           </div>
 
           <div className="space-y-3 p-3 md:hidden">
-            {admins.map((row) => {
+            {sortedAdmins.map((row) => {
               const isSelf = currentAdmin?.id === row.id;
               return (
                 <div
