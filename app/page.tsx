@@ -184,6 +184,7 @@ export default function Home() {
       )}
 
       {/* Featured products */}
+      {featuredProducts.length > 0 && (
       <section className="py-4 pb-12 sm:pb-16 max-w-7xl mx-auto px-4 lg:px-6 xl:px-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6 sm:mb-8">
           <div>
@@ -196,17 +197,12 @@ export default function Home() {
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-5 xl:gap-6">
-          {featuredProducts.length > 0 ? (
-            featuredProducts.map((product) => (
-              <ProductCard key={product.id} product={product} />
-            ))
-          ) : (
-            <p className="col-span-full text-sm text-[#a96c20]">
-              هنوز محصولی به‌عنوان پرفروش انتخاب نشده است.
-            </p>
-          )}
+          {featuredProducts.map((product) => (
+            <ProductCard key={product.id} product={product} />
+          ))}
         </div>
       </section>
+      )}
 
       {/* Why us */}
       {features.length > 0 && (

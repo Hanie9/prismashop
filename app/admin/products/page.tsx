@@ -29,6 +29,26 @@ const emptyForm = {
   active: true,
 };
 
+type ProductForm = typeof emptyForm;
+
+function serializeForm(form: ProductForm) {
+  return JSON.stringify({
+    name: form.name.trim(),
+    originalPrice: form.originalPrice,
+    discountPercent: form.discountPercent,
+    images: form.images,
+    categoryId: form.categoryId,
+    isBestseller: form.isBestseller,
+    stock: form.stock,
+    lowStockThreshold: form.lowStockThreshold,
+    description: form.description.trim(),
+    detailParagraphs: form.detailParagraphs.map((p) => p.trim()),
+    highlights: form.highlights.map((h) => h.trim()),
+    specs: form.specs.map((s) => ({ label: s.label.trim(), value: s.value.trim() })),
+    active: form.active,
+  });
+}
+
 function calcSalePrice(original: number, discountPercent: number) {
   if (!original || original <= 0) return 0;
   if (!discountPercent || discountPercent <= 0) return Math.round(original);
@@ -48,6 +68,7 @@ export default function AdminProductsPage() {
   const [query, setQuery] = useState("");
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState(emptyForm);
+  const [formBaseline, setFormBaseline] = useState("");
   const [open, setOpen] = useState(false);
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [formError, setFormError] = useState("");
@@ -70,13 +91,20 @@ export default function AdminProductsPage() {
   const salePrice = calcSalePrice(originalNum, discountNum);
   const hasDiscount = discountNum > 0 && originalNum > 0;
 
+  const isDirty = useMemo(() => {
+    if (editingId == null) return true;
+    return serializeForm(form) !== formBaseline;
+  }, [form, formBaseline, editingId]);
+
   const startCreate = () => {
     setEditingId(null);
     setFormError("");
-    setForm({
+    const nextForm = {
       ...emptyForm,
       categoryId: categories[0]?.id ?? "",
-    });
+    };
+    setForm(nextForm);
+    setFormBaseline("");
     setOpen(true);
   };
 
@@ -90,7 +118,7 @@ export default function AdminProductsPage() {
 
     setEditingId(product.id);
     setFormError("");
-    setForm({
+    const nextForm = {
       name: product.name,
       originalPrice: String(original),
       discountPercent: discount > 0 ? String(discount) : "",
@@ -107,7 +135,9 @@ export default function AdminProductsPage() {
         ? normalizeSpecs(product.specs)
         : DEFAULT_PRODUCT_SPECS.map((s) => ({ ...s })),
       active: product.active,
-    });
+    };
+    setForm(nextForm);
+    setFormBaseline(serializeForm(nextForm));
     setOpen(true);
   };
 
@@ -166,6 +196,7 @@ export default function AdminProductsPage() {
     }
     setOpen(false);
     setForm(emptyForm);
+    setFormBaseline("");
     setEditingId(null);
   };
 
@@ -633,7 +664,8 @@ export default function AdminProductsPage() {
               </button>
               <button
                 type="submit"
-                className="rounded-2xl bg-[#6d4014] px-5 py-2.5 text-sm font-bold text-white"
+                disabled={editingId != null && !isDirty}
+                className="rounded-2xl bg-[#6d4014] px-5 py-2.5 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50"
               >
                 ذخیره محصول
               </button>

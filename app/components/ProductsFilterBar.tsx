@@ -45,6 +45,20 @@ const SORT_ITEMS: {
   },
 ];
 
+function normalizeFilterSnapshot(cat: string, min: string, max: string, sale: boolean) {
+  let normalizedMin = min.replace(/[^\d]/g, "");
+  let normalizedMax = max.replace(/[^\d]/g, "");
+  if (normalizedMin && normalizedMax && Number(normalizedMin) > Number(normalizedMax)) {
+    [normalizedMin, normalizedMax] = [normalizedMax, normalizedMin];
+  }
+  return JSON.stringify({
+    cat,
+    min: normalizedMin,
+    max: normalizedMax,
+    sale,
+  });
+}
+
 function BottomSheet({
   open,
   title,
@@ -108,7 +122,6 @@ export default function ProductsFilterBar({
   maxPrice,
   sort,
   sale,
-  inStock,
   categoryOptions,
 }: {
   query: string;
@@ -117,7 +130,6 @@ export default function ProductsFilterBar({
   maxPrice: string;
   sort: string;
   sale: boolean;
-  inStock: boolean;
   categoryOptions: Option[];
 }) {
   const router = useRouter();
@@ -130,24 +142,33 @@ export default function ProductsFilterBar({
   const [minValue, setMinValue] = useState(minPrice);
   const [maxValue, setMaxValue] = useState(maxPrice);
   const [saleValue, setSaleValue] = useState(sale);
-  const [stockValue, setStockValue] = useState(inStock);
 
   useEffect(() => {
     setCatValue(categoryId);
     setMinValue(minPrice);
     setMaxValue(maxPrice);
     setSaleValue(sale);
-    setStockValue(inStock);
-  }, [categoryId, minPrice, maxPrice, sale, inStock, filterOpen]);
+  }, [categoryId, minPrice, maxPrice, sale, filterOpen]);
+
+  const appliedSnapshot = useMemo(
+    () => normalizeFilterSnapshot(categoryId, minPrice, maxPrice, sale),
+    [categoryId, minPrice, maxPrice, sale],
+  );
+
+  const draftSnapshot = useMemo(
+    () => normalizeFilterSnapshot(catValue, minValue, maxValue, saleValue),
+    [catValue, minValue, maxValue, saleValue],
+  );
+
+  const hasPendingFilters = draftSnapshot !== appliedSnapshot;
 
   const activeFilterCount = useMemo(() => {
     let n = 0;
     if (categoryId) n += 1;
     if (minPrice || maxPrice) n += 1;
     if (sale) n += 1;
-    if (inStock) n += 1;
     return n;
-  }, [categoryId, minPrice, maxPrice, sale, inStock]);
+  }, [categoryId, minPrice, maxPrice, sale]);
 
   const sortLabel =
     SORT_ITEMS.find((item) => item.value === sort)?.label ?? "مرتب‌سازی";
@@ -158,7 +179,6 @@ export default function ProductsFilterBar({
     max?: string;
     sort?: string;
     sale?: boolean;
-    stock?: boolean;
   }) => {
     const params = new URLSearchParams();
     if (query) params.set("q", query);
@@ -168,14 +188,12 @@ export default function ProductsFilterBar({
     const nextMax = patch.max !== undefined ? patch.max : maxPrice;
     const nextSort = patch.sort !== undefined ? patch.sort : sort;
     const nextSale = patch.sale !== undefined ? patch.sale : sale;
-    const nextStock = patch.stock !== undefined ? patch.stock : inStock;
 
     if (nextCat) params.set("cat", nextCat);
     if (nextMin) params.set("min", nextMin);
     if (nextMax) params.set("max", nextMax);
     if (nextSort && nextSort !== DEFAULT_SORT) params.set("sort", nextSort);
     if (nextSale) params.set("sale", "1");
-    if (nextStock) params.set("stock", "1");
 
     const qs = params.toString();
     router.push(qs ? `${pathname}?${qs}` : pathname);
@@ -199,7 +217,6 @@ export default function ProductsFilterBar({
       min,
       max,
       sale: saleValue,
-      stock: stockValue,
     });
     setFilterOpen(false);
   };
@@ -209,13 +226,11 @@ export default function ProductsFilterBar({
     setMinValue("");
     setMaxValue("");
     setSaleValue(false);
-    setStockValue(false);
     pushParams({
       cat: "",
       min: "",
       max: "",
       sale: false,
-      stock: false,
       sort,
     });
     setFilterOpen(false);
@@ -325,7 +340,8 @@ export default function ProductsFilterBar({
             <button
               type="button"
               onClick={applyFilters}
-              className="rounded-2xl bg-[#8a5419] py-3 text-sm font-bold text-white transition-colors hover:bg-[#6d4014]"
+              disabled={!hasPendingFilters}
+              className="rounded-2xl bg-[#8a5419] py-3 text-sm font-bold text-white transition-colors hover:bg-[#6d4014] disabled:cursor-not-allowed disabled:opacity-50"
             >
               اعمال فیلتر
             </button>
@@ -358,35 +374,6 @@ export default function ProductsFilterBar({
                   }`}
                 >
                   {saleValue && (
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3}>
-                      <path d="M5 13l4 4L19 7" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                  )}
-                </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setStockValue((v) => !v)}
-                className={`flex w-full items-center justify-between gap-3 rounded-2xl border px-4 py-3.5 text-sm font-medium transition-colors ${
-                  stockValue
-                    ? "border-[#8a5419] bg-[#fff1df] text-[#6d4014]"
-                    : "border-[#ead7bb] bg-[#fffaf5] text-[#4e2e0e]"
-                }`}
-              >
-                <span className="flex items-center gap-3">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" strokeLinecap="round" />
-                    <path d="M22 4 12 14.01l-3-3" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                  فقط موجودها
-                </span>
-                <span
-                  className={`flex h-5 w-5 items-center justify-center rounded-md border ${
-                    stockValue ? "border-[#8a5419] bg-[#8a5419] text-white" : "border-[#d4a96a] bg-white"
-                  }`}
-                >
-                  {stockValue && (
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3}>
                       <path d="M5 13l4 4L19 7" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>

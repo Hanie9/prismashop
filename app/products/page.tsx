@@ -27,7 +27,6 @@ function ProductsContent() {
   const minPrice = parsePriceParam(minPriceRaw);
   const maxPrice = parsePriceParam(maxPriceRaw);
   const sale = ["1", "true"].includes((searchParams.get("sale") ?? "").toLowerCase());
-  const inStock = ["1", "true"].includes((searchParams.get("stock") ?? "").toLowerCase());
 
   const categoryName = categories.find((c) => c.id === categoryId)?.name ?? "";
 
@@ -50,7 +49,6 @@ function ProductsContent() {
     if (minPrice != null) list = list.filter((p) => p.price >= minPrice);
     if (maxPrice != null) list = list.filter((p) => p.price <= maxPrice);
     if (sale) list = list.filter((p) => Boolean(p.originalPrice));
-    if (inStock) list = list.filter((p) => p.stock > 0);
 
     if (sort === "cheap") list.sort((a, b) => a.price - b.price);
     if (sort === "expensive") list.sort((a, b) => b.price - a.price);
@@ -61,10 +59,10 @@ function ProductsContent() {
     }
 
     return list;
-  }, [products, categoryId, query, sort, minPrice, maxPrice, sale, inStock]);
+  }, [products, categoryId, query, sort, minPrice, maxPrice, sale]);
 
   const hasActiveFilters = Boolean(
-    categoryId || minPrice != null || maxPrice != null || sale || inStock || sort !== "featured" || query,
+    categoryId || minPrice != null || maxPrice != null || sale || sort !== "featured" || query,
   );
 
   return (
@@ -99,7 +97,6 @@ function ProductsContent() {
             maxPrice={maxPriceRaw}
             sort={sort}
             sale={sale}
-            inStock={inStock}
             categoryOptions={[
               { value: "", label: "همه" },
               ...categories.map((cat) => ({ value: cat.id, label: cat.name })),
@@ -134,11 +131,6 @@ function ProductsContent() {
             {sale && (
               <span className="rounded-full bg-[#fdf1df] px-3 py-1.5 text-sm text-[#6d4014]">
                 فقط تخفیف‌دار
-              </span>
-            )}
-            {inStock && (
-              <span className="rounded-full bg-[#fdf1df] px-3 py-1.5 text-sm text-[#6d4014]">
-                فقط موجود
               </span>
             )}
           </div>
