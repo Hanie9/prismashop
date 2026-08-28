@@ -263,6 +263,7 @@ export function ShopProvider({ children }: { children: ReactNode }) {
   const deleteCategory = useCallback(async (id: string) => {
     await api.deleteCategory(id);
     setCategories((prev) => prev.filter((c) => c.id !== id));
+    setProducts((prev) => prev.filter((p) => p.categoryId !== id));
   }, []);
 
   const addCoupon = useCallback(async (coupon: Coupon) => {

@@ -152,6 +152,41 @@ class AdminOut(CamelModel):
     first_name: str
     last_name: str
 
+
+class AdminUserOut(CamelModel):
+    id: int
+    mobile: str | None = None
+    first_name: str
+    last_name: str
+    is_active: bool
+    created_at: datetime
+
+
+class AdminUserCreate(CamelModel):
+    mobile: str
+    first_name: str = Field(default="مدیر", min_length=1, max_length=100)
+    last_name: str = Field(default="سایت", min_length=1, max_length=100)
+
+    @field_validator("mobile")
+    @classmethod
+    def validate_mobile(cls, v: str) -> str:
+        return normalize_iran_mobile(v)
+
+
+class AdminUserUpdate(CamelModel):
+    mobile: str | None = None
+    first_name: str | None = Field(default=None, min_length=1, max_length=100)
+    last_name: str | None = Field(default=None, min_length=1, max_length=100)
+    is_active: bool | None = None
+
+    @field_validator("mobile")
+    @classmethod
+    def validate_mobile(cls, v: str | None) -> str | None:
+        if v is None:
+            return None
+        return normalize_iran_mobile(v)
+
+
 # ---------- Category ----------
 
 

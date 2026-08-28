@@ -17,4 +17,8 @@ class Category(Base):
         DateTime(timezone=True), server_default=func.now()
     )
 
-    products = relationship("Product", back_populates="category_rel")
+    products = relationship(
+        "Product",
+        back_populates="category_rel",
+        cascade="all, delete-orphan",
+    )

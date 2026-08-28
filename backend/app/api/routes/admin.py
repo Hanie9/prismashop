@@ -1,6 +1,6 @@
 from datetime import UTC, datetime
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
@@ -12,7 +12,14 @@ from app.models.coupon import Coupon
 from app.models.order import Order
 from app.models.product import Product
 from app.models.user import User
-from app.schemas import AggregatedCustomer, DashboardStats, ProductOut
+from app.schemas import (
+    AdminUserCreate,
+    AdminUserOut,
+    AdminUserUpdate,
+    AggregatedCustomer,
+    DashboardStats,
+    ProductOut,
+)
 from app.services.pricing import is_low_stock
 from app.services.serializers import serialize_order, serialize_product
 
@@ -166,3 +173,136 @@ def inventory(
     if stock_filter == "out-of-stock":
         return [p for p in items if p.stock <= 0]
     return items
+
+
+def _serialize_admin(admin: AdminUser) -> AdminUserOut:
+    return AdminUserOut.model_validate(admin)
+
+
+def _active_admin_count(db: Session) -> int:
+    return (
+        db.scalar(
+            select(func.count())
+            .select_from(AdminUser)
+            .where(AdminUser.is_active.is_(True))
+        )
+        or 0
+    )
+
+
+@router.get("/admins", response_model=list[AdminUserOut])
+def list_admins(
+    db: Session = Depends(get_db),
+    _: AdminUser = Depends(get_current_admin),
+):
+    admins = db.scalars(
+        select(AdminUser).order_by(AdminUser.created_at.desc())
+    ).all()
+    return [_serialize_admin(a) for a in admins]
+
+
+@router.post("/admins", response_model=AdminUserOut, status_code=status.HTTP_201_CREATED)
+def create_admin(
+    payload: AdminUserCreate,
+    db: Session = Depends(get_db),
+    _: AdminUser = Depends(get_current_admin),
+):
+    existing = db.scalar(
+        select(AdminUser).where(AdminUser.mobile == payload.mobile)
+    )
+    if existing:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="این شماره موبایل قبلاً به عنوان ادمین ثبت شده است",
+        )
+
+    admin = AdminUser(
+        mobile=payload.mobile,
+        first_name=payload.first_name.strip(),
+        last_name=payload.last_name.strip(),
+        is_active=True,
+    )
+    db.add(admin)
+    db.commit()
+    db.refresh(admin)
+    return _serialize_admin(admin)
+
+
+@router.patch("/admins/{admin_id}", response_model=AdminUserOut)
+def update_admin(
+    admin_id: int,
+    payload: AdminUserUpdate,
+    db: Session = Depends(get_db),
+    current_admin: AdminUser = Depends(get_current_admin),
+):
+    admin = db.get(AdminUser, admin_id)
+    if not admin:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="ادمین یافت نشد",
+        )
+
+    data = payload.updates()
+    if "mobile" in data and data["mobile"] != admin.mobile:
+        taken = db.scalar(
+            select(AdminUser).where(
+                AdminUser.mobile == data["mobile"],
+                AdminUser.id != admin_id,
+            )
+        )
+        if taken:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="این شماره موبایل قبلاً به عنوان ادمین ثبت شده است",
+            )
+
+    if data.get("is_active") is False and admin.id == current_admin.id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="نمی‌توانید حساب خود را غیرفعال کنید",
+        )
+
+    if data.get("is_active") is False and admin.is_active and _active_admin_count(db) <= 1:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="حداقل یک ادمین فعال باید باقی بماند",
+        )
+
+    for key, value in data.items():
+        if isinstance(value, str):
+            value = value.strip()
+        setattr(admin, key, value)
+
+    db.add(admin)
+    db.commit()
+    db.refresh(admin)
+    return _serialize_admin(admin)
+
+
+@router.delete("/admins/{admin_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_admin(
+    admin_id: int,
+    db: Session = Depends(get_db),
+    current_admin: AdminUser = Depends(get_current_admin),
+):
+    admin = db.get(AdminUser, admin_id)
+    if not admin:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="ادمین یافت نشد",
+        )
+
+    if admin.id == current_admin.id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="نمی‌توانید حساب خود را حذف کنید",
+        )
+
+    if admin.is_active and _active_admin_count(db) <= 1:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="حداقل یک ادمین فعال باید باقی بماند",
+        )
+
+    db.delete(admin)
+    db.commit()

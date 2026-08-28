@@ -23,6 +23,7 @@ const links = [
   { href: "/admin/discounts", label: "تخفیف‌ها" },
   { href: "/admin/inventory", label: "موجودی" },
   { href: "/admin/settings", label: "تنظیمات سایت" },
+  { href: "/admin/admins", label: "مدیران" },
 ];
 
 function AdminLogoutDialog({

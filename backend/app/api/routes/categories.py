@@ -104,15 +104,5 @@ def delete_category(
     category = db.get(Category, category_id)
     if not category:
         raise HTTPException(status_code=404, detail="دسته‌بندی یافت نشد")
-    count = db.scalar(
-        select(func.count())
-        .select_from(Product)
-        .where(Product.category_id == category.id)
-    ) or 0
-    if count > 0:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="ابتدا محصولات این دسته را حذف یا جابه‌جا کنید",
-        )
     db.delete(category)
     db.commit()

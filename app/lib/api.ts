@@ -227,6 +227,15 @@ export type AdminProfile = {
   lastName: string;
 };
 
+export type AdminUser = {
+  id: number;
+  mobile?: string | null;
+  firstName: string;
+  lastName: string;
+  isActive: boolean;
+  createdAt: string;
+};
+
 export const api = {
   ensureSession: () => apiFetch<SessionInfo>("/api/auth/session", { method: "POST" }),
   getSession: () => apiFetch<SessionInfo>("/api/auth/session"),
@@ -382,6 +391,21 @@ export const api = {
     apiFetch<import("./shop-types").Product[]>(
       `/api/admin/inventory${filter ? `?filter=${filter}` : ""}`,
     ),
+
+  listAdmins: () => apiFetch<AdminUser[]>("/api/admin/admins"),
+  createAdmin: (body: { mobile: string; firstName?: string; lastName?: string }) =>
+    apiFetch<AdminUser>("/api/admin/admins", { method: "POST", body }),
+  updateAdmin: (
+    id: number,
+    body: Partial<{
+      mobile: string;
+      firstName: string;
+      lastName: string;
+      isActive: boolean;
+    }>,
+  ) => apiFetch<AdminUser>(`/api/admin/admins/${id}`, { method: "PATCH", body }),
+  deleteAdmin: (id: number) =>
+    apiFetch<void>(`/api/admin/admins/${id}`, { method: "DELETE" }),
 
   uploadImage: (file: File) => {
     const fd = new FormData();

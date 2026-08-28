@@ -35,11 +35,16 @@ export default function PullToRefresh({ children }: { children: ReactNode }) {
     const el = rootRef.current;
     if (!el || !enabled) return;
 
+    const insideBlocked = (target: EventTarget | null) => {
+      if (!(target instanceof Element)) return false;
+      return Boolean(target.closest('[data-admin-sheet], [role="dialog"]'));
+    };
+
     const atTop = () =>
       (window.scrollY || document.documentElement.scrollTop || 0) <= 0;
 
     const onTouchStart = (e: TouchEvent) => {
-      if (refreshingRef.current) return;
+      if (refreshingRef.current || insideBlocked(e.target)) return;
       if (!atTop()) {
         pulling.current = false;
         return;
@@ -49,7 +54,7 @@ export default function PullToRefresh({ children }: { children: ReactNode }) {
     };
 
     const onTouchMove = (e: TouchEvent) => {
-      if (refreshingRef.current || !pulling.current) return;
+      if (refreshingRef.current || !pulling.current || insideBlocked(e.target)) return;
       if (!atTop()) {
         pulling.current = false;
         setPull(0);

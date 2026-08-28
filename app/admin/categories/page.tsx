@@ -1,7 +1,8 @@
 "use client";
 
 import { FormEvent, useState } from "react";
-import DialogCloseButton from "../../components/DialogCloseButton";
+import AdminBottomSheet from "../../components/AdminBottomSheet";
+import ConfirmDeleteDialog from "../../components/ConfirmDeleteDialog";
 import ImageUploadField from "../../components/ImageUploadField";
 import { useShop } from "../../components/ShopProvider";
 import type { Category } from "../../lib/shop-types";
@@ -15,6 +16,7 @@ export default function AdminCategoriesPage() {
   const [open, setOpen] = useState(false);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<Category | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const startCreate = () => {
@@ -72,23 +74,21 @@ export default function AdminCategoriesPage() {
     }
   };
 
-  const handleDelete = async (cat: Category) => {
-    const count = cat.productCount ?? 0;
-    if (count > 0) {
-      alert("ابتدا محصولات این دسته را منتقل یا حذف کنید.");
-      return;
-    }
-    if (!confirm(`حذف دسته‌بندی «${cat.name}»؟`)) return;
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
 
-    setDeletingId(cat.id);
+    setDeletingId(deleteTarget.id);
     try {
-      await deleteCategory(cat.id);
+      await deleteCategory(deleteTarget.id);
+      setDeleteTarget(null);
     } catch (err) {
       alert(err instanceof Error ? err.message : "حذف ناموفق بود.");
     } finally {
       setDeletingId(null);
     }
   };
+
+  const deleteProductCount = deleteTarget?.productCount ?? 0;
 
   return (
     <div className="space-y-5">
@@ -151,7 +151,7 @@ export default function AdminCategoriesPage() {
                     <button
                       type="button"
                       disabled={deletingId === cat.id}
-                      onClick={() => handleDelete(cat)}
+                      onClick={() => setDeleteTarget(cat)}
                       className="rounded-xl border border-red-200 px-3 py-2 text-xs font-medium text-red-600 disabled:opacity-50"
                     >
                       {deletingId === cat.id ? "در حال حذف..." : "حذف"}
@@ -164,18 +164,13 @@ export default function AdminCategoriesPage() {
         </div>
       )}
 
-      {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#2e1a08]/45 p-3 sm:p-4">
-          <form
-            onSubmit={onSubmit}
-            className="max-h-[min(90dvh,40rem)] w-full max-w-lg overflow-y-auto overscroll-contain rounded-[24px] border border-[#ead7bb] bg-white p-4 shadow-xl sm:rounded-[28px] sm:p-5"
-          >
-            <div className="mb-4 flex items-center justify-between gap-3">
-              <h2 className="text-lg font-black text-[#2e1a08]">
-                {editing ? "ویرایش دسته‌بندی" : "دسته‌بندی جدید"}
-              </h2>
-              <DialogCloseButton onClick={() => setOpen(false)} />
-            </div>
+      <AdminBottomSheet
+        open={open}
+        onClose={() => setOpen(false)}
+        title={editing ? "ویرایش دسته‌بندی" : "دسته‌بندی جدید"}
+        onSubmit={onSubmit}
+        maxWidth="lg"
+      >
             {!editing && (
               <label className="mb-3 block text-sm font-medium text-[#4e2e0e]">
                 شناسه انگلیسی
@@ -230,9 +225,35 @@ export default function AdminCategoriesPage() {
                 {saving ? "در حال ذخیره..." : "ذخیره"}
               </button>
             </div>
-          </form>
-        </div>
-      )}
+      </AdminBottomSheet>
+
+      <ConfirmDeleteDialog
+        open={deleteTarget != null}
+        title="حذف دسته‌بندی"
+        description={
+          deleteTarget ? (
+            <>
+              آیا مطمئن هستید که می‌خواهید دسته‌بندی «{deleteTarget.name}» را حذف کنید؟
+              {deleteProductCount > 0
+                ? " با حذف این دسته، محصولات داخل آن نیز برای همیشه پاک می‌شوند."
+                : " این عمل قابل بازگشت نیست."}
+            </>
+          ) : null
+        }
+        warning={
+          deleteProductCount > 0
+            ? `این دسته ${deleteProductCount.toLocaleString("fa-IR")} محصول دارد. با تأیید حذف، همهٔ آن محصولات نیز از فروشگاه حذف می‌شوند.`
+            : undefined
+        }
+        confirmLabel={
+          deleteProductCount > 0 ? "بله، دسته و محصولات حذف شوند" : undefined
+        }
+        busy={deleteTarget != null && deletingId === deleteTarget.id}
+        onCancel={() => {
+          if (deletingId == null) setDeleteTarget(null);
+        }}
+        onConfirm={() => void confirmDelete()}
+      />
     </div>
   );
 }

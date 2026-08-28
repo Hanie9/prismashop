@@ -1,7 +1,8 @@
 "use client";
 
 import { FormEvent, useMemo, useState } from "react";
-import DialogCloseButton from "../../components/DialogCloseButton";
+import AdminBottomSheet from "../../components/AdminBottomSheet";
+import ConfirmDeleteDialog from "../../components/ConfirmDeleteDialog";
 import MultiImageUploadField from "../../components/MultiImageUploadField";
 import SelectDropdown from "../../components/SelectDropdown";
 import { useShop } from "../../components/ShopProvider";
@@ -50,6 +51,8 @@ export default function AdminProductsPage() {
   const [open, setOpen] = useState(false);
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [formError, setFormError] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState<Product | null>(null);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -166,6 +169,19 @@ export default function AdminProductsPage() {
     setEditingId(null);
   };
 
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    setDeletingId(deleteTarget.id);
+    try {
+      await deleteProduct(deleteTarget.id);
+      setDeleteTarget(null);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "حذف محصول ناموفق بود.");
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   return (
     <div className="space-y-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -198,9 +214,7 @@ export default function AdminProductsPage() {
             isLow={isLowStock(product)}
             onEdit={() => startEdit(product)}
             onToggle={() => updateProduct(product.id, { active: !product.active })}
-            onDelete={() => {
-              if (confirm("این محصول حذف شود؟")) deleteProduct(product.id);
-            }}
+            onDelete={() => setDeleteTarget(product)}
           />
         ))}
         {filtered.length === 0 && (
@@ -296,9 +310,7 @@ export default function AdminProductsPage() {
                     </button>
                     <button
                       type="button"
-                      onClick={() => {
-                        if (confirm("این محصول حذف شود؟")) deleteProduct(product.id);
-                      }}
+                      onClick={() => setDeleteTarget(product)}
                       className="rounded-xl border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600"
                     >
                       حذف
@@ -311,20 +323,13 @@ export default function AdminProductsPage() {
         </table>
       </div>
 
-      {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#2e1a08]/45 p-3 sm:p-4">
-          <form
-            onSubmit={onSubmit}
-            className="max-h-[min(90dvh,40rem)] w-full max-w-2xl overflow-y-auto overscroll-contain rounded-[24px] border border-[#ead7bb] bg-white p-4 shadow-xl sm:rounded-[28px] sm:p-5"
-          >
-            <div className="mb-4 flex items-center justify-between gap-3">
-              <h2 className="text-base font-black text-[#2e1a08] sm:text-lg">
-                {editingId != null ? "ویرایش محصول" : "محصول جدید"}
-              </h2>
-              <DialogCloseButton onClick={() => setOpen(false)} />
-            </div>
-
-            <div className="grid gap-3 sm:grid-cols-2">
+      <AdminBottomSheet
+        open={open}
+        onClose={() => setOpen(false)}
+        title={editingId != null ? "ویرایش محصول" : "محصول جدید"}
+        onSubmit={onSubmit}
+      >
+        <div className="grid gap-3 sm:grid-cols-2">
               <Field label="نام محصول">
                 <input
                   required
@@ -633,9 +638,25 @@ export default function AdminProductsPage() {
                 ذخیره محصول
               </button>
             </div>
-          </form>
-        </div>
-      )}
+      </AdminBottomSheet>
+
+      <ConfirmDeleteDialog
+        open={deleteTarget != null}
+        title="حذف محصول"
+        description={
+          deleteTarget ? (
+            <>
+              آیا مطمئن هستید که می‌خواهید محصول «{deleteTarget.name}» را حذف کنید؟ این عمل
+              قابل بازگشت نیست.
+            </>
+          ) : null
+        }
+        busy={deleteTarget != null && deletingId === deleteTarget.id}
+        onCancel={() => {
+          if (deletingId == null) setDeleteTarget(null);
+        }}
+        onConfirm={() => void confirmDelete()}
+      />
     </div>
   );
 }
