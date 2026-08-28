@@ -184,14 +184,21 @@ export default function AdminAdminsPage() {
                 {admins.map((row) => {
                   const isSelf = currentAdmin?.id === row.id;
                   return (
-                    <tr key={row.id} className="border-t border-[#f1e3cf]">
-                      <td className="px-4 py-3 font-medium text-[#2e1a08]">
-                        {row.firstName} {row.lastName}
-                        {isSelf ? (
-                          <span className="mr-2 rounded-full bg-[#fff6ea] px-2 py-0.5 text-[10px] font-bold text-[#8a5419]">
-                            شما
+                    <tr
+                      key={row.id}
+                      className={`border-t border-[#f1e3cf] ${isSelf ? "bg-[#fffaf5]" : ""}`}
+                    >
+                      <td className="px-4 py-3">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="font-medium text-[#2e1a08]">
+                            {row.firstName} {row.lastName}
                           </span>
-                        ) : null}
+                          {isSelf ? (
+                            <span className="rounded-full bg-[#8a5419]/10 px-2.5 py-0.5 text-[10px] font-bold text-[#8a5419]">
+                              حساب شما
+                            </span>
+                          ) : null}
+                        </div>
                       </td>
                       <td className="px-4 py-3" dir="ltr">
                         {row.mobile ?? "—"}
@@ -241,16 +248,21 @@ export default function AdminAdminsPage() {
             {admins.map((row) => {
               const isSelf = currentAdmin?.id === row.id;
               return (
-                <div key={row.id} className="rounded-2xl border border-[#f1e3cf] p-4">
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
+                <div
+                  key={row.id}
+                  className={`rounded-2xl border p-4 ${
+                    isSelf
+                      ? "border-[#d4a96a] bg-gradient-to-l from-[#fff6ea] to-white"
+                      : "border-[#f1e3cf]"
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      {isSelf ? (
+                        <p className="mb-1.5 text-[11px] font-bold text-[#8a5419]">حساب شما</p>
+                      ) : null}
                       <p className="font-bold text-[#2e1a08]">
                         {row.firstName} {row.lastName}
-                        {isSelf ? (
-                          <span className="mr-2 rounded-full bg-[#fff6ea] px-2 py-0.5 text-[10px] font-bold text-[#8a5419]">
-                            شما
-                          </span>
-                        ) : null}
                       </p>
                       <p className="mt-1 text-sm text-[#6d4014]" dir="ltr">
                         {row.mobile ?? "—"}

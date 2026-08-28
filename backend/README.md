@@ -49,7 +49,7 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 - Docs: http://localhost:8000/docs
 - Health: http://localhost:8000/health
 
-`app.seed.run` فقط حساب ادمین را می‌سازد. ورود ادمین با شماره موبایل `ADMIN_MOBILE` و کد تأیید انجام می‌شود (در حالت توسعه کد در لاگ سرور چاپ می‌شود).
+`app.seed.run` فقط حساب ادمین اولیه را از `ADMIN_MOBILE` می‌سازد. ادمین‌های دیگر از پنل `/admin/admins` اضافه می‌شوند. ورود با کد تأیید انجام می‌شود (در حالت توسعه کد در لاگ سرور چاپ می‌شود).
 
 محصولات، دسته‌بندی‌ها و مقالات seed نمی‌شوند؛ همه از پنل ادمین ساخته می‌شوند. تنها محتوای پیش‌فرض، تنظیمات سایت و دو صفحهٔ «درباره ما» و «حریم خصوصی» است.
 
@@ -71,14 +71,14 @@ systemctl is-active postgresql
 | `/api/orders/*` | ثبت و مدیریت سفارش |
 | `/api/reviews/featured` | نظرات منتخب صفحه اصلی |
 | `/api/admin/reviews` | مدیریت نظرات و انتخاب برای صفحه اصلی |
-| `/api/coupons/*` · `/api/admin/*` | تخفیف، داشبورد، مشتریان، موجودی |
+| `/api/coupons/*` · `/api/admin/*` | تخفیف، داشبورد، مشتریان، موجودی، **مدیران** |
 | `/api/uploads/image` | آپلود تصویر ادمین (فشرده‌سازی + ذخیره در دیتابیس) |
 | `/api/media/{id}` | سرو تصویر از دیتابیس |
 | `/api/admin/media/*` | حذف تصویر و پاک‌سازی تصاویر بدون استفاده |
 | `/api/settings` · `/api/pages/*` | تنظیمات سایت و صفحات محتوایی |
 | `/api/blog/*` · `/api/contact` | بلاگ و فرم تماس |
 
-جداول مهم: `users`, `products`, `categories`, `orders`, `cart_items`, `wishlist_items`, `reviews`, `coupons`, `sessions`, `media_assets`, `site_settings`, `site_pages`, `blog_posts`.
+جداول مهم: `users`, `admin_users`, `products`, `categories`, `orders`, `cart_items`, `wishlist_items`, `reviews`, `coupons`, `sessions`, `media_assets`, `site_settings`, `site_pages`, `blog_posts`.
 
 ## تصاویر
 
